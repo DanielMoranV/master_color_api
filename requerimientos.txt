@@ -1,0 +1,270 @@
+# Master Color - Requerimientos Backend API REST
+
+## Información del Proyecto
+- **Nombre**: Master Color Backend API
+- **Tipo**: API REST
+- **Framework**: Laravel 12
+- **Autenticación**: JWT (JSON Web Tokens)
+- **Base de datos**: MySQL
+- **Propósito**: Sistema de gestión de inventario y tienda virtual
+- **Audiencia**: Administradores, vendedores, almaceneros y clientes
+
+## Stack Tecnológico
+- **Backend**: Laravel 12
+- **Base de datos**: MySQL 8.0+
+- **Autenticación**: JWT con tymon/jwt-auth
+- **Email**: Laravel Mail + SMTP
+- **Validación**: Laravel Form Requests
+- **Documentación**: L5-Swagger (OpenAPI)
+- **Testing**: PHPUnit
+
+## Estructura de Respuestas API
+
+### Respuesta Exitosa
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Operación exitosa",
+  "code": 200
+}
+```
+
+### Respuesta de Error
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "Descripción del error",
+  "errors": {},
+  "code": 400
+}
+```
+
+## Códigos de Error Estandarizados
+
+| Código | Tipo | Descripción |
+|--------|------|-------------|
+| 200 | SUCCESS | Operación exitosa |
+| 201 | CREATED | Recurso creado exitosamente |
+| 400 | VALIDATION_ERROR | Error de validación |
+| 401 | UNAUTHENTICATED | Token inválido o expirado |
+| 403 | UNAUTHORIZED | Sin permisos para esta acción |
+| 404 | NOT_FOUND | Recurso no encontrado |
+| 409 | CONFLICT | Conflicto con el estado actual |
+| 422 | UNPROCESSABLE_ENTITY | Datos no procesables |
+| 500 | SERVER_ERROR | Error interno del servidor |
+
+## Sistema de Roles y Permisos
+
+### Roles Definidos
+- **Admin**: Acceso total al sistema
+- **Vendedor**: Gestión de pedidos y clientes
+- **Almacén**: Gestión de inventario y stock
+
+### Middleware de Autenticación
+- `auth:api` - Verificar JWT válido
+- `role:admin` - Solo administradores
+- `role:admin,vendedor` - Admin y vendedores
+- `role:admin,almacen` - Admin y almacén
+
+## Endpoints Principales
+
+### Autenticación - Users
+```
+POST /api/auth/login - Login usuarios internos
+POST /api/auth/logout - Logout
+POST /api/auth/refresh - Renovar token
+POST /api/auth/forgot-password - Recuperar contraseña
+POST /api/auth/reset-password - Resetear contraseña
+GET /api/auth/me - Perfil usuario autenticado
+```
+
+### Autenticación - Clients
+```
+POST /api/client/register - Registro de cliente
+POST /api/client/login - Login cliente
+POST /api/client/logout - Logout cliente
+POST /api/client/forgot-password - Recuperar contraseña
+POST /api/client/reset-password - Resetear contraseña
+GET /api/client/profile - Perfil cliente
+PUT /api/client/profile - Actualizar perfil
+```
+
+### Gestión de Usuarios (Admin)
+```
+GET /api/users - Listar usuarios [Admin]
+POST /api/users - Crear usuario [Admin]
+GET /api/users/{id} - Ver usuario [Admin]
+PUT /api/users/{id} - Actualizar usuario [Admin]
+DELETE /api/users/{id} - Eliminar usuario [Admin]
+```
+
+### Gestión de Clientes
+```
+GET /api/clients - Listar clientes [Admin, Vendedor]
+GET /api/clients/{id} - Ver cliente [Admin, Vendedor]
+PUT /api/clients/{id} - Actualizar cliente [Admin, Vendedor]
+DELETE /api/clients/{id} - Eliminar cliente [Admin]
+```
+
+### Direcciones de Cliente
+```
+GET /api/client/addresses - Listar direcciones del cliente
+POST /api/client/addresses - Crear dirección
+PUT /api/client/addresses/{id} - Actualizar dirección
+DELETE /api/client/addresses/{id} - Eliminar dirección
+PUT /api/client/addresses/{id}/main - Establecer como principal
+```
+
+### Gestión de Productos
+```
+GET /api/products - Listar productos (público + filtros)
+POST /api/products - Crear producto [Admin, Almacén]
+GET /api/products/{id} - Ver producto
+PUT /api/products/{id} - Actualizar producto [Admin, Almacén]
+DELETE /api/products/{id} - Eliminar producto [Admin]
+GET /api/products/search - Búsqueda avanzada
+```
+
+### Gestión de Stock
+```
+GET /api/stock - Listar stock [Admin, Almacén]
+PUT /api/stock/{product_id} - Actualizar stock [Admin, Almacén]
+GET /api/stock/low - Productos con stock bajo [Admin, Almacén]
+POST /api/stock/movements - Registrar movimiento [Admin, Almacén]
+GET /api/stock/movements - Historial movimientos [Admin, Almacén]
+```
+
+### Gestión de Pedidos
+```
+GET /api/orders - Listar pedidos [Admin, Vendedor]
+POST /api/orders - Crear pedido (cliente)
+GET /api/orders/{id} - Ver pedido
+PUT /api/orders/{id}/status - Actualizar estado [Admin, Vendedor]
+GET /api/client/orders - Pedidos del cliente autenticado
+```
+
+### Carrito de Compras
+```
+GET /api/cart - Ver carrito (sessión/cliente)
+POST /api/cart/add - Añadir producto
+PUT /api/cart/update/{product_id} - Actualizar cantidad
+DELETE /api/cart/remove/{product_id} - Remover producto
+DELETE /api/cart/clear - Vaciar carrito
+```
+
+### Reportes y Estadísticas
+```
+GET /api/reports/sales - Reporte de ventas [Admin, Vendedor]
+GET /api/reports/stock - Reporte de stock [Admin, Almacén]
+GET /api/reports/movements - Reporte movimientos [Admin, Almacén]
+GET /api/dashboard/stats - Estadísticas dashboard [Admin]
+```
+
+### Roles y Permisos
+```
+GET /api/roles - Listar roles [Admin]
+POST /api/roles - Crear rol [Admin]
+PUT /api/roles/{id} - Actualizar rol [Admin]
+DELETE /api/roles/{id} - Eliminar rol [Admin]
+```
+
+## Funcionalidades Específicas
+
+### Sistema de Notificaciones por Email
+- **Stock bajo**: Alerta automática cuando stock < min_stock
+- **Nuevo pedido**: Notificación a vendedores
+- **Cambio de estado**: Notificar cliente sobre estado del pedido
+- **Recuperación de contraseña**: Email con token de reset
+- **Registro exitoso**: Email de bienvenida
+
+#### Templates de Email
+- `welcome.blade.php` - Bienvenida cliente
+- `password-reset.blade.php` - Reset contraseña
+- `order-status.blade.php` - Estado pedido
+- `low-stock-alert.blade.php` - Alerta stock bajo
+- `new-order.blade.php` - Nuevo pedido
+
+### Validaciones Personalizadas
+- **DNI**: Validación formato peruano (8 dígitos)
+- **RUC**: Validación formato peruano (11 dígitos)
+- **Email único**: Por tabla (users/clients)
+- **SKU único**: Para productos
+- **Stock mínimo**: Debe ser menor que máximo
+
+### Middleware Personalizado
+- `CheckRole` - Verificar rol de usuario
+- `CheckStockLevel` - Verificar stock disponible
+- `TrackApiUsage` - Log de uso de API
+- `JsonResponse` - Forzar respuestas JSON
+
+### Eventos y Listeners
+```php
+// Eventos
+OrderCreated::class => [SendOrderNotification::class]
+StockLow::class => [SendStockAlert::class]
+UserRegistered::class => [SendWelcomeEmail::class]
+PasswordReset::class => [SendResetEmail::class]
+```
+
+## Configuraciones Específicas
+
+### JWT Configuration
+```php
+'ttl' => 60, // minutos
+'refresh_ttl' => 20160, // minutos (2 semanas)
+'algo' => 'HS256',
+'required_claims' => ['iss', 'iat', 'exp', 'nbf', 'sub', 'jti']
+```
+
+### Rate Limiting
+- Login: 5 intentos por minuto
+- API General: 60 requests por minuto
+- Registro: 3 intentos por minuto
+
+### Base de Datos - Seeders
+- RoleSeeder (Admin, Vendedor, Almacén)
+- UserSeeder (Usuario admin por defecto)
+- ProductSeeder (Productos de ejemplo)
+
+### Testing
+- Unit Tests para modelos
+- Feature Tests para endpoints
+- Tests de autenticación JWT
+- Tests de validaciones
+
+## Estructura del Proyecto
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   ├── Auth/
+│   │   ├── Client/
+│   │   ├── Admin/
+│   │   └── API/
+│   ├── Middleware/
+│   ├── Requests/
+│   └── Resources/
+├── Models/
+├── Services/
+├── Repositories/
+├── Mail/
+├── Events/
+├── Listeners/
+└── Exceptions/
+```
+
+## Documentación API
+- Implementar Swagger/OpenAPI
+- Documentar todos los endpoints
+- Incluir ejemplos de request/response
+- Especificar códigos de error
+
+## Seguridad
+- Sanitización de inputs
+- Rate limiting
+- CORS configurado
+- Headers de seguridad
+- Validación estricta de datos
+- Logs de accesos y errores
