@@ -55,6 +55,24 @@
    npm install
    ```
 
+3. **(Opcional, recomendado para desarrollo) Instalar Laravel IDE Helper**
+   
+   Si deseas autocompletado avanzado en tu IDE:
+   ```bash
+   composer require --dev barryvdh/laravel-ide-helper
+   php artisan ide-helper:generate
+   ```
+   Puedes consultar la [documentación oficial](https://github.com/barryvdh/laravel-ide-helper) para más opciones.
+
+   **Comandos útiles de IDE Helper:**
+   > Los comandos deben escribirse en inglés, por ejemplo:
+   ```bash
+   php artisan ide-helper:generate   # Genera el archivo _ide_helper.php
+   php artisan ide-helper:meta       # Genera el archivo .phpstorm.meta.php
+   php artisan ide-helper:models     # Genera anotaciones para los modelos (añade --nowrite para solo mostrar en consola)
+   ```
+   **Nota:** Los comandos en español como `ide-helper:generar` o `ide-helper:modelos` no existen, usa siempre los comandos en inglés.
+
 3. **Configuración del entorno**
    ```bash
    cp .env.example .env
