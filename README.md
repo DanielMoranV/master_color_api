@@ -45,7 +45,8 @@
 
 1. **Clonar el repositorio**
    ```bash
-   git clone [URL_DEL_REPOSITORIO]
+   git clone https://github.com/DanielMoranV/master_color_api
+   git clone 
    cd master_color_api
    ```
 
