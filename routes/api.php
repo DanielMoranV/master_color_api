@@ -1,50 +1,22 @@
 <?php
 
-use App\Http\Controllers\Api\AddressController;
-use App\Http\Controllers\Api\ClientController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\RoleController;
-use App\Http\Controllers\Api\UserController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| AUTH ROUTES
 |--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::prefix('auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register'])->name('auth.register');
+    Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
+
+    // Rutas que requieren autenticación
+    Route::middleware(['jwt.auth', 'check.token.version'])->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::post('/refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
+        Route::post('/me', [AuthController::class, 'me'])->name('auth.me');
+    });
 });
-
-// Roles
-Route::apiResource('roles', RoleController::class);
-
-// Users
-Route::apiResource('users', UserController::class);
-
-// Clients
-Route::apiResource('clients', ClientController::class);
-
-// Client Addresses
-Route::prefix('clients/{client}')->group(function () {
-    Route::apiResource('addresses', AddressController::class);
-    Route::put('addresses/{address}/set-as-main', [AddressController::class, 'setAsMain'])->name('addresses.set-as-main');
-});
-
-// Products
-Route::apiResource('products', ProductController::class);
-Route::post('products/{product}/stock', [ProductController::class, 'updateStock'])->name('products.stock.update');
-Route::get('products/{product}/movements', [ProductController::class, 'stockMovements'])->name('products.stock.movements');
-
-// Orders
-Route::apiResource('orders', OrderController::class);
-Route::post('orders/{order}/process-payment', [OrderController::class, 'processPayment'])->name('orders.process-payment');
-Route::get('orders/status/{status}', [OrderController::class, 'byStatus'])->name('orders.by-status');

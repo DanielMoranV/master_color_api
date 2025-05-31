@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable, SoftDeletes;
 
@@ -24,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'token_version',
         'dni',
     ];
 
@@ -53,10 +55,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role_id' => 'integer',
+            'token_version' => 'integer',
             'dni' => 'integer',
         ];
     }
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
 
+    public function getJWTCustomClaims()
+    {
+        return [
+            'token_version' => $this->token_version,
+        ];
+    }
     /**
      * Get the role that owns the user.
      */
@@ -88,4 +101,5 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class);
     }
+
 }
