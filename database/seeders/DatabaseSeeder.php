@@ -16,27 +16,27 @@ class DatabaseSeeder extends Seeder
     {
         // Create default roles
         $adminRole = Role::create([
-            'name' => 'admin',
-            'description' => 'Administrator with full access',
+            'name' => 'Admin',
+            'description' => 'Acceso total al sistema',
         ]);
 
         $sellerRole = Role::create([
-            'name' => 'seller',
-            'description' => 'Salesperson with limited access',
+            'name' => 'Vendedor',
+            'description' => 'Gestión de pedidos y clientes',
         ]);
 
         $warehouseRole = Role::create([
-            'name' => 'warehouse',
-            'description' => 'Warehouse staff with inventory access',
+            'name' => 'Almacén',
+            'description' => 'Gestión de inventario y stock',
         ]);
 
-        // Create default admin user
+        // Create default admin user compatible with Postman collection
         User::create([
-            'name' => 'Administrator',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
+            'name' => 'Admin Master',
+            'email' => 'admin@mastercolor.com',
+            'password' => Hash::make('admin1234'),
             'role_id' => $adminRole->id,
-            'dni' => '12345678',
+            'dni' => 12345678,
         ]);
 
         // Create a sample seller
