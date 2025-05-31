@@ -25,6 +25,7 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
             'role_id' => $data['role_id'],
             'dni' => $data['dni'],
+            'phone' => $data['phone'] ?? null,
         ]);
 
         if (!$user) {
@@ -41,52 +42,59 @@ class AuthController extends Controller
             'expires_in' => JWTAuth::factory()->getTTL() * 60
         ], 'Usuario creado exitosamente', 201);
     } catch (\Exception $e) {
-        return ApiResponseClass::rollback($e, 'Error en el proceso de creación del usuario');
+        return ApiResponseClass::errorResponse('Error en el proceso de creación del usuario', 500, [$e->getMessage()]);
     }
     }
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
         try {
+        $credentials = $request->only('email', 'password');
+
             // Validar si el usuario esta activo y no esta eliminado
             $user = User::where('email', $credentials['email'])->first();
             if (!$user || !$user->is_active || $user->deleted_at) {
-                return ApiResponseClass::errorResponse('Credenciales inválidas');
+                return ApiResponseClass::errorResponse('Credenciales inválidas', 401);
             }
 
-        // Verificar credenciales JWT
-        if (!JWTAuth::attempt($credentials)) {
-            return ApiResponseClass::errorResponse('Credenciales inválidas', 401);
-        }
 
-        $token = JWTAuth::claims(['token_version' => $user->token_version])->fromUser($user);
+            // Verificar credenciales JWT
+            if (!JWTAuth::attempt($credentials)) {
+                return ApiResponseClass::errorResponse('Credenciales inválidas', 401);
+            }
 
-        return ApiResponseClass::sendResponse([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60,
-            'user' => new UserResource($user),
-        ], 'Usuario autenticado exitosamente', 200);
-        } catch (JWTException $e) {
-            return ApiResponseClass::errorResponse('No se pudo crear el token');
+
+            $token = JWTAuth::claims(['token_version' => $user->token_version])->fromUser($user);
+
+            return ApiResponseClass::sendResponse([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
+                'user' => new UserResource($user),
+            ], 'Usuario autenticado exitosamente', 200);
+        } catch (\Exception $e) {
+
+            return ApiResponseClass::errorResponse('Error al iniciar sesión', 500, [$e->getMessage()]);
         }
     }
 
     public function me()
     {
         $user = Auth::user();
-        if ($user instanceof User) {
-            return ApiResponseClass::sendResponse(new UserResource($user), 'Usuario autenticado', 200);
-        }
-        return ApiResponseClass::errorResponse('No autenticado', 401);
+        return $user
+            ? ApiResponseClass::sendResponse(['user' => new UserResource($user->load('role'))], 'Usuario autenticado', 200)
+            : ApiResponseClass::errorResponse('No autenticado', 401);
     }
 
     public function refresh()
     {
         try {
             $newToken = JWTAuth::parseToken()->refresh();
-            $data = ['access_token' => $newToken,    'token_type' => 'bearer',    'expires_in' => JWTAuth::factory()->getTTL() * 60,];
-            return ApiResponseClass::sendResponse($data, 'Usuario autenticado exitosamente', 200);
+            $data = [
+                'access_token' => $newToken,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
+            ];
+            return ApiResponseClass::sendResponse($data, 'Token renovado exitosamente', 200);
         } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
             return ApiResponseClass::errorResponse('Token inválido.', 401);
         }
@@ -96,13 +104,11 @@ class AuthController extends Controller
     {
         try {
             $user = Auth::user();
-            if ($user instanceof User) {
-                $user->increment('token_version');
-            }
+            $user->increment('token_version');
             $data = ['message' => 'Sesión cerrada exitosamente.'];
             return ApiResponseClass::sendResponse($data, 'Sesión cerrada exitosamente.', 200);
         } catch (\Exception $e) {
-            return ApiResponseClass::sendResponse($e->getMessage(), $e->getMessage(), 500);
+            return ApiResponseClass::errorResponse('Error al cerrar sesión', 500, [$e->getMessage()]);
         }
     }
 

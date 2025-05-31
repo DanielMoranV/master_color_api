@@ -28,7 +28,8 @@ return new class extends Migration
             $table->string('token_version')->default(0);
             $table->foreignId('role_id')->constrained('roles');
             $table->boolean('is_active')->default(true);
-            $table->bigInteger('dni')->unique();
+            $table->string('dni')->unique();
+            $table->string('phone')->nullable();
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();

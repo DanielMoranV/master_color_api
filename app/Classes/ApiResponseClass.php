@@ -38,30 +38,25 @@ class ApiResponseClass
 
     public static function sendResponse($result, $message = '', $code = 200)
     {
-        if ($code === 204) {
-            return response()->noContent();
-        }
-
-        $response = [
+        // Estandariza la respuesta de éxito
+        return response()->json([
             'success' => true,
-            'data' => $result,
+            'message' => $message,
             'status' => $code,
-            'message' => $message
-        ];
-
-        if (!empty($message)) {
-            $response['message'] = $message;
-        }
-
-        return response()->json($response, $code);
+            'data' => $result,
+            'errors' => null
+        ], $code);
     }
-    public static function errorResponse($message, $code = 500)
+
+    public static function errorResponse($message, $code = 500, $errors = null)
     {
+        // Estandariza la respuesta de error
         return response()->json([
             'success' => false,
             'message' => $message,
             'status' => $code,
-            'data' => []
+            'data' => [],
+            'errors' => $errors
         ], $code);
     }
 

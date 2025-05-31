@@ -882,22 +882,22 @@ namespace PHPSTORM_META {
         ]));
 
     override(\auth()->user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
     override(\Illuminate\Contracts\Auth\Guard::user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
     override(\Illuminate\Support\Facades\Auth::user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
     override(\request()->user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
     override(\Illuminate\Http\Request::user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
     override(\Illuminate\Support\Facades\Request::user(), map([
-        '' => \App\\Models\\User::class,
+        '' => \App\Models\User::class,
     ]));
 
     override(\config(), map([
@@ -2352,7 +2352,8 @@ namespace PHPSTORM_META {
 'cache.headers','can','guest','password.confirm','precognitive',
 'signed','throttle','verified','jwt.auth','check.token.version',);
         registerArgumentsSet('routes', 
-'sanctum.csrf-cookie','storage.local',);
+'sanctum.csrf-cookie','auth.register','auth.login','auth.logout','auth.refresh',
+'auth.me','storage.local',);
         registerArgumentsSet('views', 
 'welcome','laravel-exceptions-renderer::components.card','laravel-exceptions-renderer::components.context','laravel-exceptions-renderer::components.editor','laravel-exceptions-renderer::components.header',
 'laravel-exceptions-renderer::components.icons.chevron-down','laravel-exceptions-renderer::components.icons.chevron-up','laravel-exceptions-renderer::components.icons.computer-desktop','laravel-exceptions-renderer::components.icons.moon','laravel-exceptions-renderer::components.icons.sun',
@@ -2363,35 +2364,7 @@ namespace PHPSTORM_META {
 'pagination::semantic-ui','pagination::simple-bootstrap-4','pagination::simple-bootstrap-5','pagination::simple-default','pagination::simple-tailwind',
 'pagination::tailwind',);
         registerArgumentsSet('translations', 
-'auth.failed','auth.password','auth.throttle','pagination.previous','pagination.next',
-'passwords.reset','passwords.sent','passwords.throttled','passwords.token','passwords.user',
-'validation.accepted','validation.accepted_if','validation.active_url','validation.after','validation.after_or_equal',
-'validation.alpha','validation.alpha_dash','validation.alpha_num','validation.any_of','validation.array',
-'validation.ascii','validation.before','validation.before_or_equal','validation.between.array','validation.between.file',
-'validation.between.numeric','validation.between.string','validation.boolean','validation.can','validation.confirmed',
-'validation.contains','validation.current_password','validation.date','validation.date_equals','validation.date_format',
-'validation.decimal','validation.declined','validation.declined_if','validation.different','validation.digits',
-'validation.digits_between','validation.dimensions','validation.distinct','validation.doesnt_end_with','validation.doesnt_start_with',
-'validation.email','validation.ends_with','validation.enum','validation.exists','validation.extensions',
-'validation.file','validation.filled','validation.gt.array','validation.gt.file','validation.gt.numeric',
-'validation.gt.string','validation.gte.array','validation.gte.file','validation.gte.numeric','validation.gte.string',
-'validation.hex_color','validation.image','validation.in','validation.in_array','validation.in_array_keys',
-'validation.integer','validation.ip','validation.ipv4','validation.ipv6','validation.json',
-'validation.list','validation.lowercase','validation.lt.array','validation.lt.file','validation.lt.numeric',
-'validation.lt.string','validation.lte.array','validation.lte.file','validation.lte.numeric','validation.lte.string',
-'validation.mac_address','validation.max.array','validation.max.file','validation.max.numeric','validation.max.string',
-'validation.max_digits','validation.mimes','validation.mimetypes','validation.min.array','validation.min.file',
-'validation.min.numeric','validation.min.string','validation.min_digits','validation.missing','validation.missing_if',
-'validation.missing_unless','validation.missing_with','validation.missing_with_all','validation.multiple_of','validation.not_in',
-'validation.not_regex','validation.numeric','validation.password.letters','validation.password.mixed','validation.password.numbers',
-'validation.password.symbols','validation.password.uncompromised','validation.present','validation.present_if','validation.present_unless',
-'validation.present_with','validation.present_with_all','validation.prohibited','validation.prohibited_if','validation.prohibited_if_accepted',
-'validation.prohibited_if_declined','validation.prohibited_unless','validation.prohibits','validation.regex','validation.required',
-'validation.required_array_keys','validation.required_if','validation.required_if_accepted','validation.required_if_declined','validation.required_unless',
-'validation.required_with','validation.required_with_all','validation.required_without','validation.required_without_all','validation.same',
-'validation.size.array','validation.size.file','validation.size.numeric','validation.size.string','validation.starts_with',
-'validation.string','validation.timezone','validation.unique','validation.uploaded','validation.uppercase',
-'validation.url','validation.ulid','validation.uuid','validation.custom.attribute-name.rule-name',);
+'auth.0','pagination.0','passwords.0','validation.0',);
         registerArgumentsSet('env', 
 'APP_NAME','APP_ENV','APP_KEY','APP_DEBUG','APP_URL',
 'APP_LOCALE','APP_FALLBACK_LOCALE','APP_FAKER_LOCALE','APP_MAINTENANCE_DRIVER','PHP_CLI_SERVER_WORKERS',
@@ -2403,7 +2376,7 @@ namespace PHPSTORM_META {
 'MAIL_MAILER','MAIL_SCHEME','MAIL_HOST','MAIL_PORT','MAIL_USERNAME',
 'MAIL_PASSWORD','MAIL_FROM_ADDRESS','MAIL_FROM_NAME','AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY',
 'AWS_DEFAULT_REGION','AWS_BUCKET','AWS_USE_PATH_STYLE_ENDPOINT','VITE_APP_NAME','JWT_SECRET',
-'AUTH_GUARD','AUTH_PASSWORD_BROKER','AUTH_MODEL','AUTH_PASSWORD_RESET_TOKEN_TABLE','AUTH_PASSWORD_TIMEOUT',);
+'AUTH_GUARD','AUTH_PASSWORD_BROKER','AUTH_PASSWORD_RESET_TOKEN_TABLE','AUTH_PASSWORD_TIMEOUT',);
         
                 expectedArguments(\Illuminate\Support\Facades\Gate::has(), 0, argumentsSet('auth'));
     expectedArguments(\Illuminate\Support\Facades\Gate::allows(), 0, argumentsSet('auth'));

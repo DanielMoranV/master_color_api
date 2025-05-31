@@ -27,6 +27,8 @@ class User extends Authenticatable implements JWTSubject
         'role_id',
         'token_version',
         'dni',
+        'phone',
+        'is_active',
     ];
 
     /**
@@ -56,7 +58,9 @@ class User extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'role_id' => 'integer',
             'token_version' => 'integer',
-            'dni' => 'integer',
+            'dni' => 'string',
+            'phone' => 'string',
+            'is_active' => 'boolean',
         ];
     }
     public function getJWTIdentifier()

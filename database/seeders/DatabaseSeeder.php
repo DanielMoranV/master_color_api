@@ -36,7 +36,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mastercolor.com',
             'password' => Hash::make('admin1234'),
             'role_id' => $adminRole->id,
-            'dni' => 12345678,
+            'dni' => '12345678',
+            'phone' => '912345678',
         ]);
 
         // Create a sample seller
@@ -46,6 +47,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
             'role_id' => $sellerRole->id,
             'dni' => '23456789',
+            'phone' => '923456789',
         ]);
 
         // Create a sample warehouse staff
@@ -55,6 +57,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
             'role_id' => $warehouseRole->id,
             'dni' => '34567890',
+            'phone' => '934567890',
         ]);
     }
 }
