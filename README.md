@@ -72,7 +72,6 @@
    php artisan ide-helper:meta       # Genera el archivo .phpstorm.meta.php
    php artisan ide-helper:models     # Genera anotaciones para los modelos (añade --nowrite para solo mostrar en consola)
    ```
-   **Nota:** Los comandos en español como `ide-helper:generar` o `ide-helper:modelos` no existen, usa siempre los comandos en inglés.
 
 3. **Configuración del entorno**
    ```bash
