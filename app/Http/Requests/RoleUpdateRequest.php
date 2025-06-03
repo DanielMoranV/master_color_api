@@ -16,9 +16,8 @@ class RoleUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $roleId = $this->route('id');
         return [
-            'name' => 'sometimes|required|string|max:255|unique:roles,name,' . $roleId,
+            'name' => 'sometimes|required|string|max:255|unique:roles,name',
             'description' => 'nullable|string|max:255',
         ];
     }
@@ -34,7 +33,7 @@ class RoleUpdateRequest extends FormRequest
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
-            ApiResponseClass::validationError($validator->errors()->toArray(), $this->all())
+            ApiResponseClass::validationError($validator, [])
         );
     }
 }

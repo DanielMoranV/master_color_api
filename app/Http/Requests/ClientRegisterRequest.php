@@ -6,7 +6,7 @@ use App\Classes\ApiResponseClass;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 
-class RegisterRequest extends FormRequest
+class ClientRegisterRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,17 +25,18 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|email|max:255|unique:clients',
             'password' => 'required|string|min:8|confirmed',
-            'role_id' => 'required|integer',
-            'dni' => 'required|string|unique:users|regex:/^\d{8}$/',
-            'phone' => 'nullable|string|unique:users|regex:/^9\d{8}$/',
+            'client_type' => 'required|string|in:individual,company',
+            'document_type' => 'required|string|in:dni,ruc',
+            'identity_document' => 'required|string|unique:clients',
+            'phone' => 'nullable|string|unique:clients',
         ];
     }
 
     public function failedValidation(Validator $validator)
     {
-        ApiResponseClass::validationError($validator, []);
+        ApiResponseClass::validationError($validator, $this->validationData());
     }
 
     public function messages()
@@ -48,14 +49,13 @@ class RegisterRequest extends FormRequest
             'password.required' => 'La contraseña es obligatoria.',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
             'password.confirmed' => 'Las contraseñas no coinciden.',
-            'role_id.required' => 'El rol es obligatorio.',
-            'role_id.integer' => 'El rol debe ser un número entero.',
-            'dni.required' => 'El DNI es obligatorio.',
-            'dni.unique' => 'El DNI ya está en uso.',
-            'dni.regex' => 'El DNI debe tener exactamente 8 dígitos numéricos.',
+            'client_type.required' => 'El tipo de cliente es obligatorio.',
+            'client_type.in' => 'El tipo de cliente debe ser individual o company.',
+            'document_type.required' => 'El tipo de documento es obligatorio.',
+            'document_type.in' => 'El tipo de documento debe ser dni o ruc.',
+            'identity_document.required' => 'El documento de identidad es obligatorio.',
+            'identity_document.unique' => 'El documento de identidad ya está en uso.',
             'phone.unique' => 'El celular ya está en uso.',
-            'phone.regex' => 'El celular debe tener 9 dígitos y empezar en 9.',
         ];
     }
-
 }

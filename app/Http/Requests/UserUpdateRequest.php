@@ -16,13 +16,12 @@ class UserUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('id');
         return [
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $userId,
+            'email' => 'sometimes|required|string|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:8|confirmed',
             'role_id' => 'sometimes|required|integer|exists:roles,id',
-            'dni' => 'sometimes|required|string|unique:users,dni,' . $userId . '|regex:/^\\d{8}$/',
+            'dni' => 'sometimes|required|string|unique:users,dni|regex:/^\\d{8}$/',
             'phone' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ];
@@ -41,7 +40,7 @@ class UserUpdateRequest extends FormRequest
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
-            ApiResponseClass::validationError($validator->errors()->toArray(), $this->all())
+            ApiResponseClass::validationError($validator, [])
         );
     }
 }

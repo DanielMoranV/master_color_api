@@ -15,7 +15,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Admin Master\",\n  \"email\": \"admin@mastercolor.com\",\n  \"password\": \"admin1234\",\n  \"password_confirmation\": \"admin1234\",\n  \"role_id\": 1,\n  \"dni\": 12345678,\n  \"phone\": \"912345678\"\n}"
+          "raw": "{\n  \"name\": \"Admin Master\",\n  \"email\": \"admin@mastercolor.com\",\n  \"password\": \"admin1234\",\n  \"password_confirmation\": \"admin1234\",\n  \"role_id\": 1,\n  \"dni\": \"12345678\",\n  \"phone\": \"912345678\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/auth/register",
@@ -87,7 +87,7 @@
         }
       }
     },
-    // --- USER CRUD ---
+
     {
       "name": "Listar usuarios",
       "request": {
@@ -168,7 +168,7 @@
         }
       }
     },
-    // --- ROLE CRUD ---
+
     {
       "name": "Listar roles",
       "request": {
@@ -251,7 +251,7 @@
     }
   ],
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "base_url", "value": "http://master_color_api.test/api" },
     { "key": "access_token", "value": "" }
   ]
 }

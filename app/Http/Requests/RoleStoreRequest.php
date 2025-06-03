@@ -33,7 +33,7 @@ class RoleStoreRequest extends FormRequest
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
-            ApiResponseClass::validationError($validator->errors()->toArray(), $this->all())
+            ApiResponseClass::validationError($validator, [])
         );
     }
 }

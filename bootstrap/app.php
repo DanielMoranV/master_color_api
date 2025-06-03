@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.token.version' => CheckTokenVersion::class,
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'client.auth' => \App\Http\Middleware\ClientAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

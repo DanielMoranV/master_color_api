@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -45,10 +46,10 @@ class AuthController extends Controller
         return ApiResponseClass::errorResponse('Error en el proceso de creación del usuario', 500, [$e->getMessage()]);
     }
     }
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
         try {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->validated();
 
             // Validar si el usuario esta activo y no esta eliminado
             $user = User::where('email', $credentials['email'])->first();
