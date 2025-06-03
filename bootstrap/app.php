@@ -30,71 +30,33 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-          // Manejo de excepciones de autenticación
-          $exceptions->render(function (AuthenticationException $e, Request $request) {
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
-                return ApiResponseClass::errorResponse(
-                    app()->isProduction() ? 'No autorizado' : $e->getMessage(),
-                    401
-                );
+                return ApiResponseClass::errorResponse('No autenticado', 401, $e);
             }
         });
 
-        // Manejo de excepciones de acceso denegado
         $exceptions->render(function (UnauthorizedException $e, Request $request) {
             if ($request->is('api/*')) {
-                return ApiResponseClass::errorResponse(
-                    app()->isProduction() ? 'Acceso denegado' : $e->getMessage(),
-                    403
-                );
+                return ApiResponseClass::errorResponse('Acceso denegado', 403, $e);
             }
         });
 
-        // Manejo de excepciones de no encontrado
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
             if ($request->is('api/*') || $request->is('api')) {
-                return ApiResponseClass::errorResponse(
-                    app()->isProduction() ? 'Recurso no encontrado' : $e->getMessage(),
-                    404
-                );
+                return ApiResponseClass::errorResponse('Recurso no encontrado', 404, $e);
             }
         });
+
         $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
             if ($request->is('api/*') || $request->is('api')) {
-                return ApiResponseClass::errorResponse(
-                    app()->isProduction() ? 'Método no permitido' : $e->getMessage(),
-                    405
-                );
+                return ApiResponseClass::errorResponse('Método HTTP no permitido', 405, $e);
             }
         });
 
-        // Manejo de excepciones de ruta no encontrada (RouteNotFoundException)
         $exceptions->render(function (RouteNotFoundException $e, Request $request) {
             if ($request->is('api/*') || $request->is('api')) {
-                return ApiResponseClass::errorResponse('Route not found', 404);
-            }
-        });
-
-        // Manejo de errores de validación
-        $exceptions->render(function (ValidationException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation errors',
-                    'errors' => $e->errors(),
-                    'status' => 422,
-                    'data' => null,
-                ], 422);
-            }
-        });
-
-        // Handler catch-all para errores no controlados
-        $exceptions->render(function (Throwable $e, Request $request) {
-            if ($request->is('api/*')) {
-                return ApiResponseClass::errorResponse(
-                    app()->isProduction() ? 'Error interno del servidor' : $e->getMessage(),
-                    500
-                );
+                return ApiResponseClass::errorResponse('Ruta no encontrada', 404, $e);
             }
         });
     })->create();
