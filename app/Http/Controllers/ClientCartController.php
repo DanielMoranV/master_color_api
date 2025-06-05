@@ -6,10 +6,9 @@ use App\Classes\ApiResponseClass;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use Illuminate\Support\Facades\Validator;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use App\Models\Client;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class ClientCartController extends Controller
 {
@@ -19,8 +18,8 @@ class ClientCartController extends Controller
     public function index(Request $request)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
-            
+            $client = Auth::guard('client')->user();
+
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
@@ -34,7 +33,7 @@ class ClientCartController extends Controller
                 if ($product) {
                     $subtotal = $product->price * $item['quantity'];
                     $cartTotal += $subtotal;
-                    
+
                     $cartProducts[] = [
                         'product_id' => $product->id,
                         'name' => $product->name,
@@ -53,8 +52,8 @@ class ClientCartController extends Controller
             ];
 
             return ApiResponseClass::sendResponse(
-                $cartData, 
-                'Carrito de compras', 
+                $cartData,
+                'Carrito de compras',
                 200
             );
         } catch (\Exception $e) {
@@ -68,8 +67,8 @@ class ClientCartController extends Controller
     public function addToCart(Request $request)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
-            
+            $client = Auth::guard('client')->user();
+
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
@@ -84,14 +83,14 @@ class ClientCartController extends Controller
             }
 
             $product = Product::find($request->product_id);
-            
+
             if (!$product) {
                 return ApiResponseClass::errorResponse('Producto no encontrado', 404);
             }
-            
+
             // Check stock availability
             $stock = $product->stocks()->sum('quantity');
-            
+
             if ($stock < $request->quantity) {
                 return ApiResponseClass::errorResponse('Stock insuficiente para el producto: ' . $product->name, 400);
             }
@@ -119,8 +118,8 @@ class ClientCartController extends Controller
             $this->saveCart($request, $cart);
 
             return ApiResponseClass::sendResponse(
-                [], 
-                'Producto agregado al carrito', 
+                [],
+                'Producto agregado al carrito',
                 200
             );
         } catch (\Exception $e) {
@@ -134,8 +133,8 @@ class ClientCartController extends Controller
     public function updateQuantity(Request $request, $productId)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
-            
+            $client = Auth::guard('client')->user();
+
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
@@ -149,14 +148,14 @@ class ClientCartController extends Controller
             }
 
             $product = Product::find($productId);
-            
+
             if (!$product) {
                 return ApiResponseClass::errorResponse('Producto no encontrado', 404);
             }
-            
+
             // Check stock availability
             $stock = $product->stocks()->sum('quantity');
-            
+
             if ($stock < $request->quantity) {
                 return ApiResponseClass::errorResponse('Stock insuficiente para el producto: ' . $product->name, 400);
             }
@@ -179,8 +178,8 @@ class ClientCartController extends Controller
             $this->saveCart($request, $cart);
 
             return ApiResponseClass::sendResponse(
-                [], 
-                'Cantidad actualizada', 
+                [],
+                'Cantidad actualizada',
                 200
             );
         } catch (\Exception $e) {
@@ -194,8 +193,8 @@ class ClientCartController extends Controller
     public function removeFromCart(Request $request, $productId)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
-            
+            $client = Auth::guard('client')->user();
+
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
@@ -219,8 +218,8 @@ class ClientCartController extends Controller
             $this->saveCart($request, $updatedCart);
 
             return ApiResponseClass::sendResponse(
-                [], 
-                'Producto eliminado del carrito', 
+                [],
+                'Producto eliminado del carrito',
                 200
             );
         } catch (\Exception $e) {
@@ -234,8 +233,8 @@ class ClientCartController extends Controller
     public function clearCart(Request $request)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
-            
+            $client = Auth::guard('client')->user();
+
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
@@ -243,8 +242,8 @@ class ClientCartController extends Controller
             $this->saveCart($request, []);
 
             return ApiResponseClass::sendResponse(
-                [], 
-                'Carrito vaciado', 
+                [],
+                'Carrito vaciado',
                 200
             );
         } catch (\Exception $e) {
@@ -257,8 +256,8 @@ class ClientCartController extends Controller
      */
     private function getCart(Request $request)
     {
-        $client = $this->getAuthenticatedClient($request);
-        
+        $client = Auth::guard('client')->user();
+
         if (!$client) {
             return [];
         }
@@ -266,11 +265,11 @@ class ClientCartController extends Controller
         // In a real application, you might store the cart in a database
         // For this example, we'll use the session
         $cartKey = 'cart_' . $client->id;
-        
+
         if ($request->session()->has($cartKey)) {
             return $request->session()->get($cartKey);
         }
-        
+
         return [];
     }
 
@@ -279,8 +278,8 @@ class ClientCartController extends Controller
      */
     private function saveCart(Request $request, $cart)
     {
-        $client = $this->getAuthenticatedClient($request);
-        
+        $client = Auth::guard('client')->user();
+
         if (!$client) {
             return;
         }
@@ -291,27 +290,5 @@ class ClientCartController extends Controller
         $request->session()->put($cartKey, $cart);
     }
 
-    /**
-     * Get authenticated client from token
-     */
-    private function getAuthenticatedClient($request)
-    {
-        try {
-            $token = str_replace('Bearer ', '', $request->header('Authorization'));
-            
-            if (!$token) {
-                return null;
-            }
 
-            $decoded = JWT::decode($token, new Key(config('jwt.secret'), 'HS256'));
-            
-            if ($decoded->type !== 'client') {
-                return null;
-            }
-
-            return Client::find($decoded->sub);
-        } catch (\Exception $e) {
-            return null;
-        }
-    }
 }

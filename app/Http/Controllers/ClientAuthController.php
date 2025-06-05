@@ -28,9 +28,9 @@ class ClientAuthController extends Controller
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'client_type' => $data['client_type'],
+                'client_type' => strtolower($data['client_type']),
                 'identity_document' => $data['identity_document'],
-                'document_type' => $data['document_type'],
+                'document_type' => strtoupper($data['document_type']),
                 'phone' => $data['phone'] ?? null,
             ]);
 
@@ -43,7 +43,7 @@ class ClientAuthController extends Controller
             $token = JWTAuth::fromUser($client, ['type' => 'client']);
 
             return ApiResponseClass::sendResponse([
-                'client' => new ClientResource($client),
+                'user' => new ClientResource($client),
                 'access_token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => JWTAuth::factory()->getTTL() * 60
@@ -74,17 +74,39 @@ class ClientAuthController extends Controller
             }
 
             // Set the client in the auth guard and generate token
-            Auth::guard('client')->setUser($client);
-            $token = JWTAuth::fromUser($client, ['type' => 'client']);
+
+            $token = JWTAuth::claims([
+                'token_version' => $client->token_version,
+            ])->fromUser($client);
+
 
             return ApiResponseClass::sendResponse([
                 'access_token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => JWTAuth::factory()->getTTL() * 60,
-                'client' => new ClientResource($client),
+                'user' => new ClientResource($client),
             ], 'Cliente autenticado exitosamente', 200);
         } catch (\Exception $e) {
             return ApiResponseClass::errorResponse('Error al iniciar sesión', 500, [$e->getMessage()]);
+        }
+    }
+
+    public function me()
+    {
+        try {
+            $client = Auth::guard('client')->user();
+
+            if (!$client) {
+                return ApiResponseClass::errorResponse('No autenticado', 401);
+            }
+
+            return ApiResponseClass::sendResponse(
+                ['user' => new ClientResource($client)],
+                'Perfil del cliente',
+                200
+            );
+        } catch (\Exception $e) {
+            return ApiResponseClass::errorResponse('Error al obtener el perfil', 500, [$e->getMessage()]);
         }
     }
 
@@ -196,8 +218,11 @@ class ClientAuthController extends Controller
     public function logout()
     {
         try {
-            Auth::guard('client')->logout();
-            return ApiResponseClass::sendResponse([], 'Sesión cerrada exitosamente.', 200);
+            $client = Auth::guard('client')->user();
+            $client->increment('token_version');
+            $client->save();
+            $data = ['message' => 'Sesión cerrada exitosamente.'];
+            return ApiResponseClass::sendResponse($data, 'Sesión cerrada exitosamente.', 200);
         } catch (\Exception $e) {
             return ApiResponseClass::errorResponse('Error al cerrar sesión', 500, [$e->getMessage()]);
         }

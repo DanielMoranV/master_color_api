@@ -13,10 +13,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('email');
             $table->string('password');
-            $table->enum('type', ['persona', 'empresa']);
-            $table->bigInteger('identity_document')->unique();
-            $table->enum('type_document', ['DNI', 'RUC', 'CE', 'PASAPORTE']);
-            $table->string('phone');
+            $table->enum('client_type', ['individual', 'company']);
+            $table->string('identity_document')->unique();
+            $table->enum('document_type', ['DNI', 'RUC', 'CE', 'PASAPORTE']);
+            $table->string('token_version')->default(0);
+            $table->string('phone')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

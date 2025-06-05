@@ -11,9 +11,8 @@ use App\Http\Resources\OrderResource;
 use App\Http\Resources\OrderDetailResource;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use App\Models\Client;
+use Illuminate\Support\Facades\Auth;
 
 class ClientOrderController extends Controller
 {
@@ -23,7 +22,7 @@ class ClientOrderController extends Controller
     public function index(Request $request)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
+            $client = Auth::guard('client')->user();
             
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
@@ -55,7 +54,7 @@ class ClientOrderController extends Controller
     public function show(Request $request, $id)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
+            $client = Auth::guard('client')->user();
             
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
@@ -83,7 +82,7 @@ class ClientOrderController extends Controller
     public function trackOrder(Request $request, $id)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
+            $client = Auth::guard('client')->user();
             
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
@@ -120,7 +119,7 @@ class ClientOrderController extends Controller
     public function store(Request $request)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
+            $client = Auth::guard('client')->user();
             
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
@@ -207,7 +206,7 @@ class ClientOrderController extends Controller
     public function cancelOrder(Request $request, $id)
     {
         try {
-            $client = $this->getAuthenticatedClient($request);
+            $client = Auth::guard('client')->user();
             
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
@@ -318,27 +317,5 @@ class ClientOrderController extends Controller
         return $order->created_at->addDays(3)->format('Y-m-d');
     }
 
-    /**
-     * Get authenticated client from token
-     */
-    private function getAuthenticatedClient($request)
-    {
-        try {
-            $token = str_replace('Bearer ', '', $request->header('Authorization'));
-            
-            if (!$token) {
-                return null;
-            }
 
-            $decoded = JWT::decode($token, new Key(config('jwt.secret'), 'HS256'));
-            
-            if ($decoded->type !== 'client') {
-                return null;
-            }
-
-            return Client::find($decoded->sub);
-        } catch (\Exception $e) {
-            return null;
-        }
-    }
 }
