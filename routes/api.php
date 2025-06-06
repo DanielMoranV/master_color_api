@@ -36,10 +36,11 @@ Route::prefix('auth')->group(function () {
 Route::prefix('client/auth')->group(function () {
     Route::post('/register', [ClientAuthController::class, 'register'])->name('client.auth.register');
     Route::post('/login', [ClientAuthController::class, 'login'])->name('client.auth.login');
-    
+
     // Rutas que requieren autenticación de cliente
     Route::middleware([\App\Http\Middleware\ClientAuth::class])->group(function () {
         Route::get('/profile', [ClientAuthController::class, 'profile'])->name('client.profile');
+        Route::post('/me', [ClientAuthController::class, 'me'])->name('client.me');
         Route::put('/profile', [ClientAuthController::class, 'updateProfile'])->name('client.profile.update');
         Route::post('/change-password', [ClientAuthController::class, 'changePassword'])->name('client.password.change');
         Route::post('/refresh', [ClientAuthController::class, 'refresh'])->name('client.auth.refresh');
