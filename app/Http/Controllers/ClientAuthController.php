@@ -6,6 +6,7 @@ use App\Classes\ApiResponseClass;
 use App\Http\Requests\ClientChangePasswordRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\Client;
 use App\Http\Resources\ClientResource;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,8 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Requests\ClientRegisterRequest;
 use App\Http\Requests\ClientUpdateProfileRequest;
 use App\Http\Requests\LoginClientRequest;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ClientEmailVerification;
 
 class ClientAuthController extends Controller
 {
@@ -24,6 +27,9 @@ class ClientAuthController extends Controller
         try {
             $data = $request->validated();
 
+            // Generar token de verificación único
+            $verificationToken = Str::random(60);
+
             $client = Client::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -32,6 +38,8 @@ class ClientAuthController extends Controller
                 'identity_document' => $data['identity_document'],
                 'document_type' => strtoupper($data['document_type']),
                 'phone' => $data['phone'] ?? null,
+                'verification_token' => $verificationToken,
+                'email_verified_at' => null, // Explícitamente establecido como null hasta que se verifique
             ]);
 
             if (!$client) {
@@ -42,14 +50,79 @@ class ClientAuthController extends Controller
             Auth::guard('client')->setUser($client);
             $token = JWTAuth::fromUser($client, ['type' => 'client']);
 
+            // Enviar correo de verificación
+            try {
+                Mail::to($client->email)->send(new ClientEmailVerification($client));
+            } catch (\Exception $mailException) {
+                // Log el error pero continuamos con el registro
+                \Log::error('Error al enviar correo de verificación: ' . $mailException->getMessage());
+            }
+
             return ApiResponseClass::sendResponse([
                 'user' => new ClientResource($client),
                 'access_token' => $token,
                 'token_type' => 'bearer',
-                'expires_in' => JWTAuth::factory()->getTTL() * 60
-            ], 'Cliente registrado exitosamente', 201);
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
+                'verification_email_sent' => true,
+                'email_verified' => false
+            ], 'Cliente registrado exitosamente. Por favor verifica tu correo electrónico.', 201);
         } catch (\Exception $e) {
             return ApiResponseClass::errorResponse('Error en el registro del cliente', 500, [$e->getMessage()]);
+        }
+    }
+
+    public function verifyEmail(Request $request)
+    {
+        $request->validate(['token' => 'required|string']);
+
+        $client = Client::where('verification_token', $request->token)->first();
+
+        if (!$client) {
+            return ApiResponseClass::errorResponse('Token inválido o ya verificado.', 400);
+        }
+
+        // Verificar si el correo ya fue verificado
+        if ($client->email_verified_at) {
+            return ApiResponseClass::sendResponse([], 'El correo electrónico ya ha sido verificado anteriormente.');
+        }
+
+        $client->email_verified_at = now();
+        $client->verification_token = null;
+        $client->save();
+
+        return ApiResponseClass::sendResponse([
+            'email_verified' => true,
+            'user' => new ClientResource($client)
+        ], 'Correo verificado exitosamente. Ahora puedes iniciar sesión.');
+    }
+    
+    /**
+     * Reenviar correo de verificación
+     */
+    public function resendVerificationEmail(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        
+        $client = Client::where('email', $request->email)->first();
+        
+        if (!$client) {
+            return ApiResponseClass::errorResponse('No se encontró ningún cliente con este correo electrónico.', 404);
+        }
+        
+        if ($client->email_verified_at) {
+            return ApiResponseClass::errorResponse('El correo electrónico ya ha sido verificado.', 400);
+        }
+        
+        // Regenerar token de verificación
+        $client->verification_token = Str::random(60);
+        $client->save();
+        
+        try {
+            Mail::to($client->email)->send(new ClientEmailVerification($client));
+            
+            return ApiResponseClass::sendResponse([], 'Se ha reenviado el correo de verificación.');
+        } catch (\Exception $e) {
+            return ApiResponseClass::errorResponse('Error al enviar el correo de verificación.', 500, [$e->getMessage()]);
         }
     }
 
@@ -66,6 +139,10 @@ class ClientAuthController extends Controller
 
             if (!$client) {
                 return ApiResponseClass::errorResponse('Credenciales inválidas', 401);
+            }
+
+            if (is_null($client->email_verified_at)) {
+                return ApiResponseClass::errorResponse('Debes verificar tu correo antes de iniciar sesión.', 403);
             }
 
             // Verify password manually since we're using a custom guard

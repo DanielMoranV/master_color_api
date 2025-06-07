@@ -21,6 +21,7 @@ class ClientResource extends JsonResource
             'client_type' => $this->client_type,
             'identity_document' => $this->identity_document,
             'document_type' => $this->document_type,
+            'token_version' => $this->token_version,
             'phone' => $this->phone,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

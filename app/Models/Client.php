@@ -19,7 +19,10 @@ class Client extends Authenticatable implements JWTSubject
         'client_type',
         'identity_document',
         'document_type',
-        'phone'
+        'token_version',
+        'phone',
+        'verification_token',
+        'email_verified_at'
     ];
 
     protected $hidden = [
@@ -28,8 +31,10 @@ class Client extends Authenticatable implements JWTSubject
     ];
 
     protected $casts = [
-        'identity_document' => 'integer',
+        'identity_document' => 'string',
+        'token_version' => 'string',
         'is_active' => 'boolean',
+        'email_verified_at' => 'datetime',
     ];
 
     /**

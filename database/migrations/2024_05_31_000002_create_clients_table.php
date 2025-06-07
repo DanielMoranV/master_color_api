@@ -16,6 +16,8 @@ return new class extends Migration
             $table->enum('client_type', ['individual', 'company']);
             $table->string('identity_document')->unique();
             $table->enum('document_type', ['DNI', 'RUC', 'CE', 'PASAPORTE']);
+            $table->timestamp('email_verified_at')->nullable();
+$table->string('verification_token')->nullable();
             $table->string('token_version')->default(0);
             $table->string('phone')->nullable();
             $table->timestamps();

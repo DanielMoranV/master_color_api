@@ -36,6 +36,8 @@ Route::prefix('auth')->group(function () {
 Route::prefix('client/auth')->group(function () {
     Route::post('/register', [ClientAuthController::class, 'register'])->name('client.auth.register');
     Route::post('/login', [ClientAuthController::class, 'login'])->name('client.auth.login');
+    Route::post('/verify-email', [ClientAuthController::class, 'verifyEmail'])->name('client.auth.verify-email');
+    Route::post('/resend-verification', [ClientAuthController::class, 'resendVerificationEmail'])->name('client.auth.resend-verification');
 
     // Rutas que requieren autenticación de cliente
     Route::middleware([\App\Http\Middleware\ClientAuth::class])->group(function () {
