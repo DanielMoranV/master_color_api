@@ -38,6 +38,8 @@ Route::prefix('client/auth')->group(function () {
     Route::post('/login', [ClientAuthController::class, 'login'])->name('client.auth.login');
     Route::post('/verify-email', [ClientAuthController::class, 'verifyEmail'])->name('client.auth.verify-email');
     Route::post('/resend-verification', [ClientAuthController::class, 'resendVerificationEmail'])->name('client.auth.resend-verification');
+    Route::post('/forgot-password', [ClientAuthController::class, 'forgotPassword'])->name('client.auth.forgot-password');
+    Route::post('/reset-password', [ClientAuthController::class, 'resetPassword'])->name('client.auth.reset-password');
 
     // Rutas que requieren autenticación de cliente
     Route::middleware([\App\Http\Middleware\ClientAuth::class])->group(function () {

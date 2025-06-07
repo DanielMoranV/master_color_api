@@ -4,18 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Classes\ApiResponseClass;
 use App\Http\Requests\ClientChangePasswordRequest;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use App\Models\Client;
-use App\Http\Resources\ClientResource;
-use Illuminate\Support\Facades\Auth;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Requests\ClientRegisterRequest;
 use App\Http\Requests\ClientUpdateProfileRequest;
 use App\Http\Requests\LoginClientRequest;
-use Illuminate\Support\Facades\Mail;
+use App\Http\Resources\ClientResource;
 use App\Mail\ClientEmailVerification;
+use App\Mail\ClientResetPassword;
+use App\Models\Client;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ClientAuthController extends Controller
 {
@@ -95,31 +99,31 @@ class ClientAuthController extends Controller
             'user' => new ClientResource($client)
         ], 'Correo verificado exitosamente. Ahora puedes iniciar sesión.');
     }
-    
+
     /**
      * Reenviar correo de verificación
      */
     public function resendVerificationEmail(Request $request)
     {
         $request->validate(['email' => 'required|email']);
-        
+
         $client = Client::where('email', $request->email)->first();
-        
+
         if (!$client) {
             return ApiResponseClass::errorResponse('No se encontró ningún cliente con este correo electrónico.', 404);
         }
-        
+
         if ($client->email_verified_at) {
             return ApiResponseClass::errorResponse('El correo electrónico ya ha sido verificado.', 400);
         }
-        
+
         // Regenerar token de verificación
         $client->verification_token = Str::random(60);
         $client->save();
-        
+
         try {
             Mail::to($client->email)->send(new ClientEmailVerification($client));
-            
+
             return ApiResponseClass::sendResponse([], 'Se ha reenviado el correo de verificación.');
         } catch (\Exception $e) {
             return ApiResponseClass::errorResponse('Error al enviar el correo de verificación.', 500, [$e->getMessage()]);
@@ -212,6 +216,103 @@ class ClientAuthController extends Controller
     /**
      * Update client profile
      */
+    /**
+     * Solicitar recuperación de contraseña
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email'
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponseClass::errorResponse('Error de validación', 422, $validator->errors());
+        }
+
+        $client = Client::where('email', $request->email)->first();
+
+        if (!$client) {
+            // Por seguridad, no revelamos si el email existe o no
+            return ApiResponseClass::sendResponse([], 'Se ha enviado un enlace de recuperación si el correo existe en nuestro sistema.');
+        }
+
+        // Eliminar tokens anteriores para este email
+        DB::table('client_password_resets')
+            ->where('email', $request->email)
+            ->delete();
+
+        // Crear nuevo token
+        $token = Str::random(60);
+
+        // Guardar token en la base de datos
+        DB::table('client_password_resets')->insert([
+            'email' => $request->email,
+            'token' => Hash::make($token), // Almacenamos el hash del token por seguridad
+            'created_at' => Carbon::now()
+        ]);
+
+        // Enviar correo con el token
+        try {
+            Mail::to($request->email)->send(new ClientResetPassword($token, $request->email, $client->name));
+
+            return ApiResponseClass::sendResponse([], 'Se ha enviado un enlace de recuperación a tu correo electrónico.');
+        } catch (\Exception $e) {
+            return ApiResponseClass::errorResponse('Error al enviar el correo de recuperación.', 500, [$e->getMessage()]);
+        }
+    }
+
+    /**
+     * Validar token y restablecer contraseña
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed'
+        ]);
+
+        if ($validator->fails()) {
+            return ApiResponseClass::errorResponse('Error de validación', 422, $validator->errors());
+        }
+
+        // Verificar si existe el token para el email y no ha expirado (1 hora)
+        $passwordReset = DB::table('client_password_resets')
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$passwordReset || !Hash::check($request->token, $passwordReset->token)) {
+            return ApiResponseClass::errorResponse('Token inválido o expirado.', 400);
+        }
+
+        // Verificar si el token ha expirado (1 hora)
+        if (Carbon::parse($passwordReset->created_at)->addHour()->isPast()) {
+            // Eliminar el token expirado
+            DB::table('client_password_resets')
+                ->where('email', $request->email)
+                ->delete();
+
+            return ApiResponseClass::errorResponse('El token ha expirado. Por favor solicita un nuevo enlace de recuperación.', 400);
+        }
+
+        // Actualizar la contraseña del cliente
+        $client = Client::where('email', $request->email)->first();
+
+        if (!$client) {
+            return ApiResponseClass::errorResponse('No se encontró ningún cliente con este correo electrónico.', 404);
+        }
+
+        $client->password = Hash::make($request->password);
+        $client->save();
+
+        // Eliminar el token usado
+        DB::table('client_password_resets')
+            ->where('email', $request->email)
+            ->delete();
+
+        return ApiResponseClass::sendResponse([], 'Contraseña actualizada correctamente.');
+    }
+
     public function updateProfile(ClientUpdateProfileRequest $request)
     {
         try {
