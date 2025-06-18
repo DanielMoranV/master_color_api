@@ -18,10 +18,10 @@ class UserUpdateRequest extends FormRequest
     {
         return [
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email',
-            'password' => 'nullable|string|min:8|confirmed',
+            'email' => 'sometimes|required|string|email|max:255',
+            'password' => 'nullable|string|min:8',
             'role_id' => 'sometimes|required|integer|exists:roles,id',
-            'dni' => 'sometimes|required|string|unique:users,dni|regex:/^\\d{8}$/',
+            'dni' => 'sometimes|required|string|regex:/^\\d{8}$/',
             'phone' => 'nullable|string',
             'is_active' => 'nullable|boolean',
         ];

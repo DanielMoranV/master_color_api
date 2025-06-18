@@ -102,7 +102,7 @@ Route::prefix('client/cart')->middleware([\App\Http\Middleware\ClientAuth::class
 */
 
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
-    Route::apiResource('user', UserController::class);
+    Route::apiResource('users', UserController::class);
 });
 
 /*
@@ -112,5 +112,5 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 */
 
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
-    Route::apiResource('role', RoleController::class);
+    Route::apiResource('roles', RoleController::class);
 });
