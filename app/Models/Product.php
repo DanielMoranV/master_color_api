@@ -19,6 +19,7 @@ class Product extends Model
         'barcode',
         'brand',
         'description',
+        'category',
         'presentation',
         'unidad',
         'user_id'
