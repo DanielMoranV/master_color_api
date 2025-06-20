@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use App\Classes\ApiResponseClass;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Log;
 class AdminOnly
 {
     public function handle(Request $request, Closure $next)

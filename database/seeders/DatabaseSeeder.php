@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Product;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -52,12 +53,25 @@ class DatabaseSeeder extends Seeder
 
         // Create a sample warehouse staff
         User::create([
-            'name' => 'Jane Warehouse',
-            'email' => 'warehouse@example.com',
-            'password' => Hash::make('password'),
-            'role_id' => $warehouseRole->id,
-            'dni' => '34567890',
-            'phone' => '934567890',
+            'name' => 'Daniel Moran',
+            'email' => 'daniel.moranv94@gmail.com',
+            'password' => Hash::make('admin1234'),
+            'role_id' => $adminRole->id,
+            'dni' => '70315050',
+            'phone' => '987654321',
+        ]);
+
+        Product::create([
+            'name' => 'Product 1',
+            'sku' => 'SKU1',
+            'image_url' => 'image.jpg',
+            'barcode' => 'barcode1',
+            'brand' => 'Brand 1',
+            'description' => 'Description 1',
+            'presentation' => 'Presentation 1',
+            'category' => 'Category 1',
+            'unidad' => 'Unidad 1',
+            'user_id' => 3,
         ]);
     }
 }

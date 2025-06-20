@@ -7,6 +7,7 @@ use App\Http\Controllers\ClientAuthController;
 use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\ClientOrderController;
 use App\Http\Controllers\ClientCartController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -113,4 +114,14 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
     Route::apiResource('roles', RoleController::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| PRODUCT ROUTES
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
+    Route::apiResource('products', ProductController::class);
 });

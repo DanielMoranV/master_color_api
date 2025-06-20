@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 use App\Classes\ApiResponseClass;
 use Illuminate\Contracts\Validation\Validator;
-
+use Illuminate\Http\Exceptions\HttpResponseException;
 class ProductStoreRequest extends FormRequest
 {
     /**
@@ -25,22 +25,23 @@ class ProductStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:products,sku|max:255',
-            'image_url' => 'required|string|max:255',
-            'barcode' => 'required|string|unique:products,barcode|max:255',
-            'brand' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
-            'presentation' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
-            'unidad' => 'required|string|max:255',
-            'user_id' => 'required|integer|exists:users,id',
+                'name' => 'required|string|max:255',
+                'sku' => 'required|string|unique:products,sku|max:255',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
+                'barcode' => 'required|string|unique:products,barcode|max:255',
+                'brand' => 'required|string|max:255',
+                'description' => 'required|string|max:255',
+                'presentation' => 'required|string|max:255',
+                'category' => 'required|string|max:255',
+                'unidad' => 'required|string|max:255',
         ];
     }
 
     public function failedValidation(Validator $validator)
     {
-        ApiResponseClass::validationError($validator, []);
+        throw new HttpResponseException(
+            ApiResponseClass::validationError($validator, [])
+        );
     }
 
     public function messages(): array
@@ -48,14 +49,13 @@ class ProductStoreRequest extends FormRequest
         return [
             'name.required' => 'El nombre es obligatorio.',
             'sku.required' => 'El SKU es obligatorio.',
-            'image_url.required' => 'La URL de la imagen es obligatoria.',
+            'image.required' => 'La imagen es obligatoria.',
             'barcode.required' => 'El código de barras es obligatorio.',
             'brand.required' => 'La marca es obligatoria.',
             'description.required' => 'La descripción es obligatoria.',
             'presentation.required' => 'La presentación es obligatoria.',
             'category.required' => 'La categoría es obligatoria.',
             'unidad.required' => 'La unidad es obligatoria.',
-            'user_id.required' => 'El usuario es obligatorio.',
         ];
     }
 }
