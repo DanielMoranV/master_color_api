@@ -122,6 +122,10 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 |--------------------------------------------------------------------------
 */
 
+Route::prefix('products')->group(function () {
+    Route::post('/updateProduct/{id}', [ProductController::class, 'updateProduct'])->name('products.updateProduct');
+});
+
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
     Route::apiResource('products', ProductController::class);
 });

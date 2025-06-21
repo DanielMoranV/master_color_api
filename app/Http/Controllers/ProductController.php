@@ -167,10 +167,12 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(ProductUpdateRequest $request, string $id)
+    public function updateProduct(ProductUpdateRequest $request, string $id)
     {
         try {
             DB::beginTransaction();
+
+            Log::info('Updating product: ' . $id . ' with data: ' . json_encode($request->all()));
 
             // Buscar el producto
             $product = Product::find($id);
@@ -188,6 +190,8 @@ class ProductController extends Controller
 
             // Validar datos
             $validated = $request->validated();
+
+            Log::info('Product updated: ' . $id . ' with data: ' . json_encode($validated));
 
             // Manejar la imagen si se está actualizando
             if ($request->hasFile('image')) {
