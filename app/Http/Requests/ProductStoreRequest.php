@@ -6,7 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 use App\Classes\ApiResponseClass;
 use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 class ProductStoreRequest extends FormRequest
 {
     /**
@@ -39,14 +38,13 @@ class ProductStoreRequest extends FormRequest
 
     public function failedValidation(Validator $validator)
     {
-        throw new HttpResponseException(
-            ApiResponseClass::validationError($validator, [])
-        );
+        ApiResponseClass::validationError($validator, []);
     }
 
     public function messages(): array
     {
         return [
+            // Mensajes para required
             'name.required' => 'El nombre es obligatorio.',
             'sku.required' => 'El SKU es obligatorio.',
             'image.required' => 'La imagen es obligatoria.',
@@ -56,6 +54,35 @@ class ProductStoreRequest extends FormRequest
             'presentation.required' => 'La presentación es obligatoria.',
             'category.required' => 'La categoría es obligatoria.',
             'unidad.required' => 'La unidad es obligatoria.',
+
+            // Mensajes para unique
+            'sku.unique' => 'Este SKU ya existe en el sistema.',
+            'barcode.unique' => 'Este código de barras ya existe en el sistema.',
+
+            // Mensajes para max
+            'name.max' => 'El nombre no puede tener más de 255 caracteres.',
+            'sku.max' => 'El SKU no puede tener más de 255 caracteres.',
+            'barcode.max' => 'El código de barras no puede tener más de 255 caracteres.',
+            'brand.max' => 'La marca no puede tener más de 255 caracteres.',
+            'description.max' => 'La descripción no puede tener más de 255 caracteres.',
+            'presentation.max' => 'La presentación no puede tener más de 255 caracteres.',
+            'category.max' => 'La categoría no puede tener más de 255 caracteres.',
+            'unidad.max' => 'La unidad no puede tener más de 255 caracteres.',
+
+            // Mensajes para string
+            'name.string' => 'El nombre debe ser un texto válido.',
+            'sku.string' => 'El SKU debe ser un texto válido.',
+            'barcode.string' => 'El código de barras debe ser un texto válido.',
+            'brand.string' => 'La marca debe ser un texto válido.',
+            'description.string' => 'La descripción debe ser un texto válido.',
+            'presentation.string' => 'La presentación debe ser un texto válido.',
+            'category.string' => 'La categoría debe ser un texto válido.',
+            'unidad.string' => 'La unidad debe ser un texto válido.',
+
+            // Mensajes para image
+            'image.image' => 'El archivo debe ser una imagen válida.',
+            'image.mimes' => 'La imagen debe ser de tipo: jpeg, png, jpg o gif.',
+            'image.max' => 'La imagen no puede ser mayor a 2MB.',
         ];
     }
 }

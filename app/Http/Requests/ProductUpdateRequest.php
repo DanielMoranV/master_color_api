@@ -39,23 +39,28 @@ class ProductUpdateRequest extends FormRequest
 
     public function failedValidation(Validator $validator)
     {
-        throw new HttpResponseException(
-            ApiResponseClass::validationError($validator, [])
-        );
+        ApiResponseClass::validationError($validator, []);
     }
 
     public function messages(): array
     {
         return [
             'name.required' => 'El nombre es obligatorio.',
+            'name.string' => 'El nombre debe ser un texto válido.',
             'sku.required' => 'El SKU es obligatorio.',
+            'sku.string' => 'El SKU debe ser un texto válido.',
             'image.required' => 'La imagen es obligatoria.',
             'barcode.required' => 'El código de barras es obligatorio.',
             'brand.required' => 'La marca es obligatoria.',
+            'brand.string' => 'La marca debe ser un texto válido.',
             'description.required' => 'La descripción es obligatoria.',
+            'description.string' => 'La descripción debe ser un texto válido.',
             'presentation.required' => 'La presentación es obligatoria.',
+            'presentation.string' => 'La presentación debe ser un texto válido.',
             'category.required' => 'La categoría es obligatoria.',
+            'category.string' => 'La categoría debe ser un texto válido.',
             'unidad.required' => 'La unidad es obligatoria.',
+            'unidad.string' => 'La unidad debe ser un texto válido.',
         ];
     }
 }
