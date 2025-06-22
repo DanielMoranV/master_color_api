@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $warehouseRole = Role::create([
-            'name' => 'Almacén',
+            'name' => 'Almacen',
             'description' => 'Gestión de inventario y stock',
         ]);
 
