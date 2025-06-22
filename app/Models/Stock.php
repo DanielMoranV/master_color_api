@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Stock extends Model
 {
@@ -36,11 +37,20 @@ class Stock extends Model
         return $this->belongsTo(Product::class);
     }
 
-    /**
-     * Get the stock movements for the stock.
-     */
-    public function movements(): HasMany
+
+    public function details(): HasMany
     {
-        return $this->hasMany(StockMovement::class, 'stock_id');
+        return $this->hasMany(DetailMovement::class);
+    }
+
+    public function movementsThroughDetails(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            StockMovement::class,
+            DetailMovement::class,
+            'stock_id',
+            'stock_movement_id',
+            'id'
+        );
     }
 }

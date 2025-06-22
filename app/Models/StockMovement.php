@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockMovement extends Model
 {
@@ -26,18 +27,15 @@ class StockMovement extends Model
     ];
 
     /**
-     * Get the stock that owns the movement.
-     */
-    public function stock(): BelongsTo
-    {
-        return $this->belongsTo(Stock::class);
-    }
-
-    /**
      * Get the user that owns the movement.
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function details(): HasMany
+    {
+        return $this->hasMany(DetailMovement::class);
     }
 }

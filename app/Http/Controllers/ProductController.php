@@ -36,20 +36,6 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        // Para APIs REST, este método no es necesario
-        // Pero si lo necesitas, puedes retornar metadatos para el formulario
-        return ApiResponseClass::sendResponse(
-            ['message' => 'Endpoint para obtener datos del formulario de creación'],
-            'Formulario de creación',
-            200
-        );
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(ProductStoreRequest $request)
@@ -97,14 +83,6 @@ class ProductController extends Controller
             return ApiResponseClass::errorResponse($e->getMessage(), 400);
         } catch (\Exception $e) {
             DB::rollBack();
-
-            // Log del error para debugging
-            Log::error('Error creating product: ' . $e->getMessage(), [
-                'user_id' => Auth::id(),
-                'request_data' => $request->except(['image']),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
                 500
@@ -225,15 +203,6 @@ class ProductController extends Controller
             return ApiResponseClass::errorResponse($e->getMessage(), 400);
         } catch (\Exception $e) {
             DB::rollBack();
-
-            // Log del error para debugging
-            Log::error('Error updating product: ' . $e->getMessage(), [
-                'product_id' => $id,
-                'user_id' => Auth::id(),
-                'request_data' => $request->except(['image']),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
                 500
@@ -278,12 +247,6 @@ class ProductController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Error deleting product: ' . $e->getMessage(), [
-                'product_id' => $id,
-                'user_id' => Auth::id(),
-                'trace' => $e->getTraceAsString()
-            ]);
 
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
