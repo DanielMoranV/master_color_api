@@ -26,7 +26,7 @@ class ProductStoreRequest extends FormRequest
         return [
                 'name' => 'required|string|max:255',
                 'sku' => 'required|string|unique:products,sku|max:255',
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
+                'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
                 'barcode' => 'required|string|unique:products,barcode|max:255',
                 'brand' => 'required|string|max:255',
                 'description' => 'required|string|max:255',
@@ -81,8 +81,8 @@ class ProductStoreRequest extends FormRequest
 
             // Mensajes para image
             'image.image' => 'El archivo debe ser una imagen válida.',
-            'image.mimes' => 'La imagen debe ser de tipo: jpeg, png, jpg o gif.',
-            'image.max' => 'La imagen no puede ser mayor a 2MB.',
+            'image.mimes' => 'La imagen debe ser de tipo: jpeg, png, jpg o webp.',
+            'image.max' => 'La imagen no puede ser mayor a 5MB.',
         ];
     }
 }

@@ -27,18 +27,18 @@ class Product extends Model
 
     public function getImageUrlAttribute($value)
     {
-    if (!$value) {
-        return null;
-    }
+        if (!$value) {
+            return null;
+        }
 
-    // Si ya es una URL completa, devolverla tal como está
-    if (str_starts_with($value, 'http')) {
-        return $value;
-    }
+        // Si ya es una URL completa, devolverla tal como está
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
 
-    // Si es una ruta relativa, generar URL completa
-    return Storage::disk('public')->url($value);
-}
+        // Si es una ruta relativa, generar URL completa
+        return Storage::disk('public')->url($value);
+    }
 
     /**
      * Get the user that owns the product.

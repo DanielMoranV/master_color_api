@@ -8,15 +8,15 @@ use App\Classes\ApiResponseClass;
 use App\Http\Resources\ProductResource;
 use App\Http\Requests\ProductStoreRequest;
 use App\Http\Requests\ProductUpdateRequest;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Services\ProductService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
+    public function __construct(
+        private ProductService $productService
+    ) {}
     /**
      * Display a listing of the resource.
      */
@@ -34,38 +34,14 @@ class ProductController extends Controller
             return ApiResponseClass::errorResponse('Error interno del servidor', 500);
         }
     }
-
     /**
      * Store a newly created resource in storage.
      */
     public function store(ProductStoreRequest $request)
     {
         try {
-            DB::beginTransaction();
-
-            // Validar datos
-            $validated = $request->validated();
-
-            // Manejar la imagen si existe
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $imagePath = $this->handleImageUpload($request->file('image'));
-            }
-
-            // Preparar datos para crear el producto
-            $productData = array_merge($validated, [
-                'image_url' => $imagePath,
-                'user_id' => Auth::id(),
-            ]);
-
-            // Remover el campo image del array ya que no va a la BD
-            unset($productData['image']);
-
-            // Crear el producto
-            $product = Product::create($productData);
-
-            DB::commit();
-
+            $product = $this->productService->createProduct($request);
+            
             return ApiResponseClass::sendResponse(
                 new ProductResource($product),
                 'Producto creado exitosamente',
@@ -73,16 +49,14 @@ class ProductController extends Controller
             );
 
         } catch (ValidationException $e) {
-            DB::rollBack();
             return ApiResponseClass::errorResponse(
                 'Error de validación: ' . $e->getMessage(),
                 422
             );
         } catch (\InvalidArgumentException $e) {
-            DB::rollBack();
             return ApiResponseClass::errorResponse($e->getMessage(), 400);
         } catch (\Exception $e) {
-            DB::rollBack();
+            Log::error('Error creating product: ' . $e->getMessage());
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
                 500
@@ -96,7 +70,8 @@ class ProductController extends Controller
     public function show(string $id)
     {
         try {
-            $product = Product::find($id);
+            $product = $this->productService->getProductById((int) $id);
+            
             if (!$product) {
                 return ApiResponseClass::errorResponse('Producto no encontrado', 404);
             }
@@ -148,43 +123,11 @@ class ProductController extends Controller
     public function updateProduct(ProductUpdateRequest $request, string $id)
     {
         try {
-            DB::beginTransaction();
-            // Buscar el producto
-            $product = Product::find($id);
+            $product = $this->productService->updateProduct($request, (int) $id);
+            
             if (!$product) {
                 return ApiResponseClass::errorResponse('Producto no encontrado', 404);
             }
-
-            // // Verificar que el usuario tenga permisos para actualizar este producto
-            // if ($product->user_id !== Auth::id()) {
-            //     return ApiResponseClass::errorResponse(
-            //         'No tienes permisos para actualizar este producto',
-            //         403
-            //     );
-            // }
-
-            // Validar datos
-            $validated = $request->validated();
-
-            // Manejar la imagen si se está actualizando
-            if ($request->hasFile('image')) {
-                // Eliminar imagen anterior si existe
-                $this->deleteOldImage($product->image_url);
-
-                // Subir nueva imagen
-                $validated['image_url'] = $this->handleImageUpload($request->file('image'));
-            }
-
-            // Remover el campo image del array ya que no va a la BD
-            unset($validated['image']);
-
-            // Actualizar el producto
-            $product->update($validated);
-
-            DB::commit();
-
-            // Recargar el producto con los datos actualizados
-            $product->refresh();
 
             return ApiResponseClass::sendResponse(
                 new ProductResource($product),
@@ -193,16 +136,14 @@ class ProductController extends Controller
             );
 
         } catch (ValidationException $e) {
-            DB::rollBack();
             return ApiResponseClass::errorResponse(
                 'Error de validación: ' . $e->getMessage(),
                 422
             );
         } catch (\InvalidArgumentException $e) {
-            DB::rollBack();
             return ApiResponseClass::errorResponse($e->getMessage(), 400);
         } catch (\Exception $e) {
-            DB::rollBack();
+            Log::error('Error updating product: ' . $e->getMessage());
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
                 500
@@ -216,28 +157,11 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         try {
-            DB::beginTransaction();
-
-            $product = Product::find($id);
-            if (!$product) {
+            $deleted = $this->productService->deleteProduct((int) $id);
+            
+            if (!$deleted) {
                 return ApiResponseClass::errorResponse('Producto no encontrado', 404);
             }
-
-            // // Verificar permisos
-            // if ($product->user_id !== Auth::id()) {
-            //     return ApiResponseClass::errorResponse(
-            //         'No tienes permisos para eliminar este producto',
-            //         403
-            //     );
-            // }
-
-            // Eliminar imagen si existe
-            $this->deleteOldImage($product->image_url);
-
-            // Eliminar producto
-            $product->delete();
-
-            DB::commit();
 
             return ApiResponseClass::sendResponse(
                 null,
@@ -246,8 +170,7 @@ class ProductController extends Controller
             );
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
+            Log::error('Error deleting product: ' . $e->getMessage());
             return ApiResponseClass::errorResponse(
                 'Error interno del servidor',
                 500
@@ -255,58 +178,4 @@ class ProductController extends Controller
         }
     }
 
-    /**
-     * Maneja la subida de imagen del producto
-     */
-    private function handleImageUpload(UploadedFile $image): string
-    {
-        // Validar que sea una imagen válida
-        $allowedMimes = ['jpg', 'jpeg', 'png', 'webp'];
-        $extension = $image->getClientOriginalExtension();
-
-        if (!in_array(strtolower($extension), $allowedMimes)) {
-            throw new \InvalidArgumentException('Tipo de archivo no permitido. Solo se permiten: jpg, jpeg, png, webp');
-        }
-
-        // Validar tamaño (máximo 5MB)
-        if ($image->getSize() > 5 * 1024 * 1024) {
-            throw new \InvalidArgumentException('El archivo es demasiado grande. Máximo 5MB permitidos');
-        }
-
-        // Generar nombre único
-        $fileName = uniqid('product_') . '_' . time() . '.' . $extension;
-
-        // Guardar en storage/app/public/products
-        $path = $image->storeAs('products', $fileName, 'public');
-
-        // Retornar solo la ruta relativa
-        return $path;
-    }
-
-    /**
-     * Eliminar imagen anterior del storage
-     */
-    private function deleteOldImage(?string $imageUrl): void
-    {
-        if (!$imageUrl) {
-            return;
-        }
-
-        // Si es una URL completa, extraer la ruta
-        if (str_starts_with($imageUrl, 'http')) {
-            $parsedUrl = parse_url($imageUrl);
-            if (isset($parsedUrl['path'])) {
-                $path = str_replace('/storage/', '', $parsedUrl['path']);
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
-            return;
-        }
-
-        // Si es una ruta relativa, eliminar directamente
-        if (Storage::disk('public')->exists($imageUrl)) {
-            Storage::disk('public')->delete($imageUrl);
-        }
-    }
 }

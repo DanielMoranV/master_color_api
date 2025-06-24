@@ -15,6 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('stock_movement_id')->constrained('stock_movements')->onDelete('cascade');
             $table->foreignId('stock_id')->constrained('stocks')->onDelete('cascade');
+            $table->integer('quantity');
+            $table->decimal('unit_price', 10, 2)->nullable();
+            $table->integer('previous_stock');
+            $table->integer('new_stock');
             $table->timestamps();
         });
     }

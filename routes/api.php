@@ -8,6 +8,7 @@ use App\Http\Controllers\ClientAddressController;
 use App\Http\Controllers\ClientOrderController;
 use App\Http\Controllers\ClientCartController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StockMovementController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -128,4 +129,14 @@ Route::prefix('products')->group(function () {
 
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
     Route::apiResource('products', ProductController::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| STOCK MOVEMENT ROUTES
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
+    Route::apiResource('stock-movements', StockMovementController::class);
 });

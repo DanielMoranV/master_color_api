@@ -27,7 +27,7 @@ class ProductUpdateRequest extends FormRequest
             return [
                 'name' => 'required|string|max:255',
                 'sku' => 'required|string|max:255',
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
                 'barcode' => 'required|string|max:255',
                 'brand' => 'required|string|max:255',
                 'description' => 'required|string|max:255',
@@ -49,7 +49,9 @@ class ProductUpdateRequest extends FormRequest
             'name.string' => 'El nombre debe ser un texto válido.',
             'sku.required' => 'El SKU es obligatorio.',
             'sku.string' => 'El SKU debe ser un texto válido.',
-            'image.required' => 'La imagen es obligatoria.',
+            'image.image' => 'El archivo debe ser una imagen válida.',
+            'image.mimes' => 'La imagen debe ser de tipo: jpeg, png, jpg o webp.',
+            'image.max' => 'La imagen no puede ser mayor a 5MB.',
             'barcode.required' => 'El código de barras es obligatorio.',
             'brand.required' => 'La marca es obligatoria.',
             'brand.string' => 'La marca debe ser un texto válido.',

@@ -10,10 +10,8 @@ return new class extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->enum('movement_type', ['Entrada', 'Salida', 'Ajuste', 'Devolucion']);
-            $table->integer('quantity');
+            $table->enum('movement_type', ['entrada', 'salida', 'ajuste', 'devolucion']);
             $table->string('reason');
-            $table->decimal('unit_price', 10, 2);
             $table->foreignId('user_id')->constrained('users');
             $table->string('voucher_number')->nullable();
             $table->timestamps();

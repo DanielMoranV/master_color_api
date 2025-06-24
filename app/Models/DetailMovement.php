@@ -10,6 +10,17 @@ class DetailMovement extends Model
     protected $fillable = [
         'stock_movement_id',
         'stock_id',
+        'quantity',
+        'unit_price',
+        'previous_stock',
+        'new_stock'
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'previous_stock' => 'integer',
+        'new_stock' => 'integer',
     ];
 
     public function stockMovement()
