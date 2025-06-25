@@ -46,6 +46,7 @@ class StockMovementController extends Controller
     public function store(StockMovementStoreRequest $request)
     {
         try {
+            Log::info('Creating stock movement: ' . json_encode($request->validated()));
             $movement = $this->stockMovementService->createMovement($request->validated());
             return ApiResponseClass::sendResponse(
                 new StockMovementResource($movement->load(['user', 'details.stock.product'])),

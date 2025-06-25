@@ -60,18 +60,5 @@ class DatabaseSeeder extends Seeder
             'dni' => '70315050',
             'phone' => '987654321',
         ]);
-
-        Product::create([
-            'name' => 'Product 1',
-            'sku' => 'SKU1',
-            'image_url' => 'image.jpg',
-            'barcode' => 'barcode1',
-            'brand' => 'Brand 1',
-            'description' => 'Description 1',
-            'presentation' => 'Presentation 1',
-            'category' => 'Category 1',
-            'unidad' => 'Unidad 1',
-            'user_id' => 3,
-        ]);
     }
 }

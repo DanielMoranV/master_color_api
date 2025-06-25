@@ -124,6 +124,7 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 */
 
 Route::prefix('products')->group(function () {
+    Route::get('/public', [ProductController::class, 'publicIndex'])->name('products.public.index');
     Route::post('/updateProduct/{id}', [ProductController::class, 'updateProduct'])->name('products.updateProduct');
 });
 

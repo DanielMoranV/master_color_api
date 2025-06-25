@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
+use App\Services\FileUploadService;
 class Product extends Model
 {
     use SoftDeletes;
@@ -27,17 +27,7 @@ class Product extends Model
 
     public function getImageUrlAttribute($value)
     {
-        if (!$value) {
-            return null;
-        }
-
-        // Si ya es una URL completa, devolverla tal como está
-        if (str_starts_with($value, 'http')) {
-            return $value;
-        }
-
-        // Si es una ruta relativa, generar URL completa
-        return Storage::disk('public')->url($value);
+        return app(FileUploadService::class)->getImageUrl($value);
     }
 
     /**

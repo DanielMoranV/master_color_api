@@ -20,6 +20,7 @@ return new class extends Migration
             $table->integer('previous_stock');
             $table->integer('new_stock');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

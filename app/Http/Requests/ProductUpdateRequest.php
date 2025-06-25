@@ -34,6 +34,11 @@ class ProductUpdateRequest extends FormRequest
                 'presentation' => 'required|string|max:255',
                 'category' => 'required|string|max:255',
                 'unidad' => 'required|string|max:255',
+                // Stock fields (quantity excluded - only editable at creation)
+                'min_stock' => 'nullable|integer|min:0',
+                'max_stock' => 'nullable|integer|min:0',
+                'purchase_price' => 'nullable|numeric|min:0|max:99999999.99',
+                'sale_price' => 'nullable|numeric|min:0|max:99999999.99',
         ];
     }
 
@@ -63,6 +68,18 @@ class ProductUpdateRequest extends FormRequest
             'category.string' => 'La categoría debe ser un texto válido.',
             'unidad.required' => 'La unidad es obligatoria.',
             'unidad.string' => 'La unidad debe ser un texto válido.',
+            
+            // Mensajes para stock fields
+            'min_stock.integer' => 'El stock mínimo debe ser un número entero.',
+            'min_stock.min' => 'El stock mínimo no puede ser negativo.',
+            'max_stock.integer' => 'El stock máximo debe ser un número entero.',
+            'max_stock.min' => 'El stock máximo no puede ser negativo.',
+            'purchase_price.numeric' => 'El precio de compra debe ser un número válido.',
+            'purchase_price.min' => 'El precio de compra no puede ser negativo.',
+            'purchase_price.max' => 'El precio de compra no puede exceder 99999999.99.',
+            'sale_price.numeric' => 'El precio de venta debe ser un número válido.',
+            'sale_price.min' => 'El precio de venta no puede ser negativo.',
+            'sale_price.max' => 'El precio de venta no puede exceder 99999999.99.',
         ];
     }
 }

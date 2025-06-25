@@ -33,6 +33,12 @@ class ProductStoreRequest extends FormRequest
                 'presentation' => 'required|string|max:255',
                 'category' => 'required|string|max:255',
                 'unidad' => 'required|string|max:255',
+                // Stock fields
+                'quantity' => 'nullable|integer|min:0',
+                'min_stock' => 'nullable|integer|min:0',
+                'max_stock' => 'nullable|integer|min:0',
+                'purchase_price' => 'required|numeric|min:0|max:99999999.99',
+                'sale_price' => 'required|numeric|min:0|max:99999999.99',
         ];
     }
 
@@ -83,6 +89,22 @@ class ProductStoreRequest extends FormRequest
             'image.image' => 'El archivo debe ser una imagen válida.',
             'image.mimes' => 'La imagen debe ser de tipo: jpeg, png, jpg o webp.',
             'image.max' => 'La imagen no puede ser mayor a 5MB.',
+
+            // Mensajes para stock fields
+            'quantity.integer' => 'La cantidad debe ser un número entero.',
+            'quantity.min' => 'La cantidad no puede ser negativa.',
+            'min_stock.integer' => 'El stock mínimo debe ser un número entero.',
+            'min_stock.min' => 'El stock mínimo no puede ser negativo.',
+            'max_stock.integer' => 'El stock máximo debe ser un número entero.',
+            'max_stock.min' => 'El stock máximo no puede ser negativo.',
+            'purchase_price.required' => 'El precio de compra es obligatorio.',
+            'purchase_price.numeric' => 'El precio de compra debe ser un número válido.',
+            'purchase_price.min' => 'El precio de compra no puede ser negativo.',
+            'purchase_price.max' => 'El precio de compra no puede exceder 99999999.99.',
+            'sale_price.required' => 'El precio de venta es obligatorio.',
+            'sale_price.numeric' => 'El precio de venta debe ser un número válido.',
+            'sale_price.min' => 'El precio de venta no puede ser negativo.',
+            'sale_price.max' => 'El precio de venta no puede exceder 99999999.99.',
         ];
     }
 }

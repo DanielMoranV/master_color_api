@@ -88,9 +88,7 @@ class StockMovementService
                 $stock->increment('quantity', $quantity);
                 break;
             case 'salida':
-                if ($stock->quantity < $quantity) {
-                    throw new \Exception("Stock insuficiente para el producto {$stock->product->name}. Stock actual: {$stock->quantity}, cantidad solicitada: {$quantity}");
-                }
+                $this->validateSufficientStock($stock, $quantity);
                 $stock->decrement('quantity', $quantity);
                 break;
             case 'ajuste':
@@ -116,9 +114,7 @@ class StockMovementService
             case 'entrada':
                 return $stock->quantity + $quantity;
             case 'salida':
-                if ($stock->quantity < $quantity) {
-                    throw new \Exception("Stock insuficiente para el producto {$stock->product->name}. Stock actual: {$stock->quantity}, cantidad solicitada: {$quantity}");
-                }
+                $this->validateSufficientStock($stock, $quantity);
                 return $stock->quantity - $quantity;
             case 'ajuste':
                 return $quantity;
@@ -126,6 +122,13 @@ class StockMovementService
                 return $stock->quantity + $quantity;
             default:
                 return $stock->quantity;
+        }
+    }
+
+    private function validateSufficientStock(Stock $stock, int $quantity): void
+    {
+        if ($stock->quantity < $quantity) {
+            throw new \Exception("Stock insuficiente para el producto {$stock->product->name}. Stock actual: {$stock->quantity}, cantidad solicitada: {$quantity}");
         }
     }
 

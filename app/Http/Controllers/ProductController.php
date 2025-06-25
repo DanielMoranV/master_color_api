@@ -34,12 +34,31 @@ class ProductController extends Controller
             return ApiResponseClass::errorResponse('Error interno del servidor', 500);
         }
     }
+
+    /**
+     * Display a listing of all products with stock information (public access).
+     */
+    public function publicIndex()
+    {
+        try {
+            $products = Product::with('stock')->get();
+            return ApiResponseClass::sendResponse(
+                ProductResource::collection($products),
+                'Lista pública de productos con stock',
+                200
+            );
+        } catch (\Exception $e) {
+            Log::error('Error fetching public products: ' . $e->getMessage());
+            return ApiResponseClass::errorResponse('Error interno del servidor', 500);
+        }
+    }
     /**
      * Store a newly created resource in storage.
      */
     public function store(ProductStoreRequest $request)
     {
         try {
+            Log::info('Creating product: ' . json_encode($request->validated()));
             $product = $this->productService->createProduct($request);
             
             return ApiResponseClass::sendResponse(

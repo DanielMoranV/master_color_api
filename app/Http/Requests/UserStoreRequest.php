@@ -32,9 +32,13 @@ class UserStoreRequest extends FormRequest
         return [
             'name.required' => 'El nombre es obligatorio.',
             'email.required' => 'El correo electrónico es obligatorio.',
+            'email.unique' => 'El correo electrónico ya está en uso.',
             'password.required' => 'La contraseña es obligatoria.',
             'role_id.required' => 'El rol es obligatorio.',
+            'role_id.exists' => 'El rol no existe.',
             'dni.required' => 'El DNI es obligatorio.',
+            'dni.unique' => 'El DNI ya está en uso.',
+            'dni.regex' => 'El DNI debe tener 8 dígitos.',
         ];
     }
 

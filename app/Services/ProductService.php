@@ -14,7 +14,9 @@ use Illuminate\Http\UploadedFile;
 class ProductService
 {
     public function __construct(
-        private FileUploadService $fileUploadService
+        private FileUploadService $fileUploadService,
+        private StockService $stockService,
+        private StockMovementService $stockMovementService
     ) {}
 
     public function getAllProducts(int $perPage = 15): LengthAwarePaginator
@@ -49,14 +51,42 @@ class ProductService
                 );
             }
 
+            // Separate product data from stock data
+            $stockData = [
+                'quantity' => 0, // Start with 0, will be set by stock movement
+                'min_stock' => $validated['min_stock'] ?? 0,
+                'max_stock' => $validated['max_stock'] ?? 0,
+                'purchase_price' => $validated['purchase_price'],
+                'sale_price' => $validated['sale_price'],
+            ];
+
             $productData = array_merge($validated, [
                 'image_url' => $imagePath,
                 'user_id' => Auth::id(),
             ]);
 
-            unset($productData['image']);
+            // Remove stock fields and image from product data
+            unset($productData['image'], $productData['quantity'], $productData['min_stock'], 
+                  $productData['max_stock'], $productData['purchase_price'], $productData['sale_price']);
 
             $product = Product::create($productData);
+
+            $stock = $this->stockService->createInitialStock($product, $stockData);
+
+            // Create initial stock movement if quantity > 0
+            $initialQuantity = $validated['quantity'] ?? 0;
+            if ($initialQuantity > 0) {
+                $this->stockMovementService->createMovement([
+                    'movement_type' => 'entrada',
+                    'reason' => 'Stock inicial del producto',
+                    'voucher_number' => 'INIT-' . $product->id,
+                    'stocks' => [[
+                        'stock_id' => $stock->id,
+                        'quantity' => $initialQuantity,
+                        'unit_price' => $stockData['purchase_price']
+                    ]]
+                ]);
+            }
 
             $this->clearProductCache();
             
@@ -99,9 +129,25 @@ class ProductService
                 );
             }
 
+            // Separate stock data from product data
+            $stockData = [];
+            $stockFields = ['min_stock', 'max_stock', 'purchase_price', 'sale_price'];
+            
+            foreach ($stockFields as $field) {
+                if (isset($validated[$field])) {
+                    $stockData[$field] = $validated[$field];
+                    unset($validated[$field]);
+                }
+            }
+
             unset($validated['image']);
 
             $product->update($validated);
+
+            // Update stock if stock data provided
+            if (!empty($stockData)) {
+                $this->stockService->updateStock($product->id, $stockData);
+            }
             
             $this->clearProductCache($id);
             
