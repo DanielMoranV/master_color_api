@@ -12,6 +12,7 @@ use App\Http\Resources\OrderDetailResource;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Client;
+use App\Services\PaymentService;
 use Illuminate\Support\Facades\Auth;
 
 class ClientOrderController extends Controller
@@ -325,6 +326,60 @@ class ClientOrderController extends Controller
         
         // Calculate estimated delivery date (e.g., 3 days from order date)
         return $order->created_at->addDays(3)->format('Y-m-d');
+    }
+
+    /**
+     * Create payment preference for an order.
+     */
+    public function createPayment($id)
+    {
+        try {
+            $client = Auth::guard('client')->user();
+            
+            if (!$client) {
+                return ApiResponseClass::errorResponse('No autenticado', 401);
+            }
+
+            $order = $client->orders()->with(['orderDetails.product', 'client'])->find($id);
+            
+            if (!$order) {
+                return ApiResponseClass::errorResponse('Pedido no encontrado', 404);
+            }
+
+            // Verificar que la orden esté en estado pendiente_pago
+            if ($order->status !== 'pendiente_pago') {
+                return ApiResponseClass::errorResponse('Esta orden no está disponible para pago', 400);
+            }
+
+            // Verificar stock antes del pago
+            foreach ($order->orderDetails as $detail) {
+                if ($detail->product->stock->quantity < $detail->quantity) {
+                    return ApiResponseClass::errorResponse(
+                        'Stock insuficiente para el producto: ' . $detail->product->name . 
+                        '. Disponible: ' . $detail->product->stock->quantity, 
+                        400
+                    );
+                }
+            }
+
+            $paymentService = app(PaymentService::class);
+            $result = $paymentService->createPaymentPreference($order);
+
+            if (!$result['success']) {
+                return ApiResponseClass::errorResponse('Error al crear preferencia de pago: ' . $result['error'], 500);
+            }
+
+            return ApiResponseClass::sendResponse([
+                'preference_id' => $result['preference_id'],
+                'init_point' => $result['init_point'],
+                'sandbox_init_point' => $result['sandbox_init_point'],
+                'order_id' => $order->id,
+                'total_amount' => $order->total
+            ], 'Preferencia de pago creada exitosamente', 200);
+
+        } catch (\Exception $e) {
+            return ApiResponseClass::errorResponse('Error interno del servidor', 500, [$e->getMessage()]);
+        }
     }
 
 

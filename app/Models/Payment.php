@@ -14,9 +14,19 @@ class Payment extends Model
         'order_id',
         'payment_method',
         'payment_code',
+        'amount',
+        'currency',
+        'status',
+        'external_id',
+        'external_response',
         'document_type',
         'nc_reference',
         'observations'
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'external_response' => 'array',
     ];
 
     /**

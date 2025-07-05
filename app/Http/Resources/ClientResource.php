@@ -25,6 +25,10 @@ class ClientResource extends JsonResource
             'verification_token' => $this->verification_token,
             'email_verified_at' => $this->email_verified_at,
             'phone' => $this->phone,
+            'addresses' => $this->whenLoaded('addresses'),
+            'main_address' => $this->whenLoaded('addresses', function () {
+                return $this->addresses->where('is_main', true)->first();
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

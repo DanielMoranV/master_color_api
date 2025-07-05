@@ -11,6 +11,7 @@ use App\Http\Resources\ClientResource;
 use App\Mail\ClientEmailVerification;
 use App\Mail\ClientResetPassword;
 use App\Models\Client;
+use App\Models\Address;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,9 @@ class ClientAuthController extends Controller
             // Generar token de verificación único
             $verificationToken = Str::random(60);
 
+            // Usar transacción para crear cliente y dirección
+            DB::beginTransaction();
+
             $client = Client::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -47,8 +51,31 @@ class ClientAuthController extends Controller
             ]);
 
             if (!$client) {
+                DB::rollBack();
                 return ApiResponseClass::errorResponse('Error al crear el cliente');
             }
+
+            // Crear dirección principal del cliente
+            $address = Address::create([
+                'client_id' => $client->id,
+                'address_full' => $data['address_full'],
+                'district' => $data['district'],
+                'province' => $data['province'],
+                'department' => $data['department'],
+                'postal_code' => $data['postal_code'] ?? null,
+                'reference' => $data['reference'] ?? null,
+                'is_main' => true // Primera dirección es la principal
+            ]);
+
+            if (!$address) {
+                DB::rollBack();
+                return ApiResponseClass::errorResponse('Error al crear la dirección');
+            }
+
+            DB::commit();
+
+            // Cargar las direcciones para la respuesta
+            $client->load('addresses');
 
             // Generate JWT token with client guard
             Auth::guard('client')->setUser($client);
@@ -69,8 +96,9 @@ class ClientAuthController extends Controller
                 'expires_in' => JWTAuth::factory()->getTTL() * 60,
                 'verification_email_sent' => true,
                 'email_verified' => false
-            ], 'Cliente registrado exitosamente. Por favor verifica tu correo electrónico.', 201);
+            ], 'Cliente registrado exitosamente con dirección de entrega. Por favor verifica tu correo electrónico.', 201);
         } catch (\Exception $e) {
+            DB::rollBack();
             return ApiResponseClass::errorResponse('Error en el registro del cliente', 500, [$e->getMessage()]);
         }
     }
@@ -160,6 +188,8 @@ class ClientAuthController extends Controller
                 'token_version' => $client->token_version,
             ])->fromUser($client);
 
+            // Cargar direcciones del cliente
+            $client->load('addresses');
 
             return ApiResponseClass::sendResponse([
                 'access_token' => $token,
@@ -180,6 +210,9 @@ class ClientAuthController extends Controller
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
+
+            // Cargar direcciones del cliente
+            $client->load('addresses');
 
             return ApiResponseClass::sendResponse(
                 ['user' => new ClientResource($client)],
@@ -202,6 +235,9 @@ class ClientAuthController extends Controller
             if (!$client) {
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
+
+            // Cargar direcciones del cliente
+            $client->load('addresses');
 
             return ApiResponseClass::sendResponse(
                 ['client' => new ClientResource($client)],
@@ -329,6 +365,9 @@ class ClientAuthController extends Controller
             });
 
             $client->update($data);
+
+            // Cargar direcciones del cliente
+            $client->load('addresses');
 
             return ApiResponseClass::sendResponse(
                 ['client' => new ClientResource($client)],

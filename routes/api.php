@@ -9,6 +9,7 @@ use App\Http\Controllers\ClientOrderController;
 use App\Http\Controllers\ClientCartController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -81,6 +82,7 @@ Route::prefix('client/orders')->middleware([\App\Http\Middleware\ClientAuth::cla
     Route::get('/{id}', [ClientOrderController::class, 'show'])->name('client.orders.show');
     Route::get('/{id}/track', [ClientOrderController::class, 'trackOrder'])->name('client.orders.track');
     Route::put('/{id}/cancel', [ClientOrderController::class, 'cancelOrder'])->name('client.orders.cancel');
+    Route::post('/{id}/payment', [ClientOrderController::class, 'createPayment'])->name('client.orders.payment');
 });
 
 /*
@@ -142,3 +144,17 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
     Route::apiResource('stock-movements', StockMovementController::class);
     Route::patch('stock-movements/{stockMovement}/cancel', [StockMovementController::class, 'cancel'])->name('stock-movements.cancel');
 });
+
+/*
+|--------------------------------------------------------------------------
+| WEBHOOK ROUTES
+|--------------------------------------------------------------------------
+*/
+
+// MercadoPago webhook (sin autenticación para permitir notificaciones)
+Route::post('webhooks/mercadopago', [WebhookController::class, 'mercadoPago'])->name('webhooks.mercadopago');
+
+// Payment status check (con autenticación para clientes)
+Route::get('payment-status/{orderId}', [WebhookController::class, 'getPaymentStatus'])
+    ->middleware([\App\Http\Middleware\ClientAuth::class])
+    ->name('payment.status');

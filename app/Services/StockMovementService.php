@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\StockMovement;
 use App\Models\DetailMovement;
 use App\Models\Stock;
+use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -181,6 +182,54 @@ class StockMovementService
         ];
 
         return $reverseTypes[$movementType] ?? null;
+    }
+
+    /**
+     * Process stock reduction for a paid order
+     */
+    public function processOrderStockReduction(Order $order): StockMovement
+    {
+        return DB::transaction(function () use ($order) {
+            // Crear movimiento de stock por venta
+            $movement = StockMovement::create([
+                'movement_type' => 'salida',
+                'reason' => "VENTA - Orden #{$order->id} - Cliente: {$order->client->name}",
+                'voucher_number' => "VENTA-{$order->id}-" . now()->format('YmdHis'),
+                'user_id' => $order->user_id ?? 1 // Usuario del sistema si no hay usuario asignado
+            ]);
+
+            // Procesar cada producto de la orden
+            foreach ($order->orderDetails as $detail) {
+                $stock = $detail->product->stock;
+                
+                if (!$stock) {
+                    throw new \Exception("Producto {$detail->product->name} no tiene stock configurado");
+                }
+
+                // Validar stock suficiente
+                if ($stock->quantity < $detail->quantity) {
+                    throw new \Exception("Stock insuficiente para {$detail->product->name}. Disponible: {$stock->quantity}, Requerido: {$detail->quantity}");
+                }
+
+                // Crear detalle del movimiento
+                $previousStock = $stock->quantity;
+                $newStock = $previousStock - $detail->quantity;
+
+                DetailMovement::create([
+                    'stock_movement_id' => $movement->id,
+                    'stock_id' => $stock->id,
+                    'quantity' => $detail->quantity,
+                    'unit_price' => $detail->unit_price,
+                    'previous_stock' => $previousStock,
+                    'new_stock' => $newStock
+                ]);
+
+                // Actualizar stock
+                $stock->update(['quantity' => $newStock]);
+            }
+
+            return $movement;
+        });
     }
 
 }
