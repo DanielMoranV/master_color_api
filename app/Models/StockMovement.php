@@ -15,7 +15,12 @@ class StockMovement extends Model
         'movement_type',
         'reason',
         'user_id',
-        'voucher_number'
+        'voucher_number',
+        'canceled_at'
+    ];
+
+    protected $casts = [
+        'canceled_at' => 'datetime',
     ];
 
     /**

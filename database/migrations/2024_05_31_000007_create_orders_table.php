@@ -16,7 +16,7 @@ return new class extends Migration
             $table->decimal('subtotal', 10, 2);
             $table->decimal('shipping_cost', 10, 2)->default(0);
             $table->decimal('discount', 10, 2)->default(0);
-            $table->enum('status', ['pendiente', 'confirmado', 'procesando', 'enviado', 'entregado', 'cancelado'])->default('pendiente');
+            $table->enum('status', ['pendiente_pago', 'pendiente', 'confirmado', 'procesando', 'enviado', 'entregado', 'cancelado', 'pago_fallido'])->default('pendiente_pago');
             $table->string('codigo_payment')->nullable();
             $table->text('observations')->nullable();
             $table->timestamps();

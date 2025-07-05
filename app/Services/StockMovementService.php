@@ -132,4 +132,55 @@ class StockMovementService
         }
     }
 
+    public function cancelMovement(StockMovement $movement): StockMovement
+    {
+        if ($movement->canceled_at) {
+            throw new \Exception("Este movimiento ya ha sido cancelado");
+        }
+
+        $reverseType = $this->getReverseMovementType($movement->movement_type);
+        
+        if (!$reverseType) {
+            throw new \Exception("No se puede cancelar un movimiento de tipo '{$movement->movement_type}'");
+        }
+
+        return DB::transaction(function () use ($movement, $reverseType) {
+            // Marcar movimiento original como cancelado
+            $movement->update([
+                'canceled_at' => now()
+            ]);
+
+            // Crear movimiento de cancelación
+            $cancelationMovement = StockMovement::create([
+                'movement_type' => $reverseType,
+                'reason' => "ANULACIÓN del movimiento #{$movement->id} - {$movement->reason}",
+                'voucher_number' => "ANUL-{$movement->id}-" . now()->format('YmdHis'),
+                'user_id' => Auth::id()
+            ]);
+
+            // Crear detalles del movimiento de cancelación (mismos productos, mismas cantidades)
+            foreach ($movement->details as $detail) {
+                $this->processStockMovement($cancelationMovement, [
+                    'stock_id' => $detail->stock_id,
+                    'quantity' => $detail->quantity,
+                    'unit_price' => $detail->unit_price
+                ]);
+            }
+
+            return $cancelationMovement;
+        });
+    }
+
+    private function getReverseMovementType(string $movementType): ?string
+    {
+        $reverseTypes = [
+            'entrada' => 'salida',
+            'salida' => 'entrada',
+            'devolucion' => 'salida',
+            'ajuste' => null // No permitido
+        ];
+
+        return $reverseTypes[$movementType] ?? null;
+    }
+
 }

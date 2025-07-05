@@ -144,28 +144,31 @@ class ClientOrderController extends Controller
             $productDetails = [];
 
             foreach ($request->products as $item) {
-                $product = Product::find($item['product_id']);
+                $product = Product::with('stock')->find($item['product_id']);
                 
                 if (!$product) {
                     DB::rollBack();
                     return ApiResponseClass::errorResponse('Producto no encontrado: ' . $item['product_id'], 404);
                 }
                 
-                // Check stock availability
-                $stock = $product->stocks()->sum('quantity');
-                
-                if ($stock < $item['quantity']) {
+                if (!$product->stock) {
                     DB::rollBack();
-                    return ApiResponseClass::errorResponse('Stock insuficiente para el producto: ' . $product->name, 400);
+                    return ApiResponseClass::errorResponse('Producto sin stock configurado: ' . $product->name, 400);
                 }
                 
-                $itemSubtotal = $product->price * $item['quantity'];
+                // Check stock availability
+                if ($product->stock->quantity < $item['quantity']) {
+                    DB::rollBack();
+                    return ApiResponseClass::errorResponse('Stock insuficiente para el producto: ' . $product->name . '. Disponible: ' . $product->stock->quantity, 400);
+                }
+                
+                $itemSubtotal = $product->stock->sale_price * $item['quantity'];
                 $subtotal += $itemSubtotal;
                 
                 $productDetails[] = [
                     'product_id' => $product->id,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $product->price,
+                    'unit_price' => $product->stock->sale_price,
                     'subtotal' => $itemSubtotal,
                 ];
             }
@@ -178,7 +181,7 @@ class ClientOrderController extends Controller
                 'subtotal' => $subtotal,
                 'shipping_cost' => 0, // You can calculate this based on your business logic
                 'discount' => 0, // You can apply discounts based on your business logic
-                'status' => 'pendiente',
+                'status' => 'pendiente_pago',
                 'observations' => $request->observations,
             ]);
 
@@ -218,8 +221,8 @@ class ClientOrderController extends Controller
                 return ApiResponseClass::errorResponse('Pedido no encontrado', 404);
             }
 
-            // Check if order can be cancelled (only pending or confirmed orders)
-            $cancellableStatuses = ['pendiente', 'confirmado'];
+            // Check if order can be cancelled (only pending payment, pending or confirmed orders)
+            $cancellableStatuses = ['pendiente_pago', 'pendiente', 'confirmado'];
             
             if (!in_array($order->status, $cancellableStatuses)) {
                 return ApiResponseClass::errorResponse('Este pedido no puede ser cancelado en su estado actual', 400);
@@ -279,8 +282,15 @@ class ClientOrderController extends Controller
             case 'pendiente':
                 $history[] = [
                     'status' => 'pendiente',
+                    'date' => $order->updated_at,
+                    'description' => 'Pedido confirmado'
+                ];
+                // Fall through to add previous statuses
+            case 'pendiente_pago':
+                $history[] = [
+                    'status' => 'pendiente_pago',
                     'date' => $order->created_at,
-                    'description' => 'Pedido recibido'
+                    'description' => 'Esperando pago'
                 ];
                 break;
             case 'cancelado':
@@ -290,9 +300,9 @@ class ClientOrderController extends Controller
                     'description' => 'Pedido cancelado'
                 ];
                 $history[] = [
-                    'status' => 'pendiente',
+                    'status' => 'pendiente_pago',
                     'date' => $order->created_at,
-                    'description' => 'Pedido recibido'
+                    'description' => 'Esperando pago'
                 ];
                 break;
         }

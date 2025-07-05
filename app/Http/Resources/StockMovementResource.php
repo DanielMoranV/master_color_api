@@ -20,6 +20,7 @@ class StockMovementResource extends JsonResource
             'reason' => $this->reason,
             'voucher_number' => $this->voucher_number,
             'user_id' => $this->user_id,
+            'canceled_at' => $this->canceled_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'user' => $this->whenLoaded('user'),

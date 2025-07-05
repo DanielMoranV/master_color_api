@@ -27,6 +27,7 @@ class ProductResource extends JsonResource
             'unidad' => $this->unidad,
             'user_id' => $this->user_id,
             'user_name' => optional($this->user)->name,
+            'stock_id' => optional($this->stock)->id,
             'stock_quantity' => optional($this->stock)->quantity ?? 0,
             'min_stock' => optional($this->stock)->min_stock ?? 0,
             'max_stock' => optional($this->stock)->max_stock ?? 0,

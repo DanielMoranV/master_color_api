@@ -60,5 +60,8 @@ class DatabaseSeeder extends Seeder
             'dni' => '70315050',
             'phone' => '987654321',
         ]);
+
+        // Seed products with stock and initial movement
+        $this->call(ProductsWithStockSeeder::class);
     }
 }

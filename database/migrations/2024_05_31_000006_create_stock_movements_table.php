@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('reason');
             $table->foreignId('user_id')->constrained('users');
             $table->string('voucher_number')->nullable();
+            $table->timestamp('canceled_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

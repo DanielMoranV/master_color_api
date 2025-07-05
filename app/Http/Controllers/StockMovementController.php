@@ -95,6 +95,24 @@ class StockMovementController extends Controller
     }
 
     /**
+     * Cancel a stock movement.
+     */
+    public function cancel(StockMovement $stockMovement)
+    {
+        try {
+            $cancelationMovement = $this->stockMovementService->cancelMovement($stockMovement);
+            return ApiResponseClass::sendResponse(
+                new StockMovementResource($cancelationMovement->load(['user', 'details.stock.product'])),
+                'Movimiento de stock cancelado exitosamente',
+                200
+            );
+        } catch (\Exception $e) {
+            Log::error('Error canceling stock movement: ' . $e->getMessage());
+            return ApiResponseClass::errorResponse('Error interno del servidor: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(StockMovement $stockMovement)

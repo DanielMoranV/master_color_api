@@ -140,4 +140,5 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 
 Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(function () {
     Route::apiResource('stock-movements', StockMovementController::class);
+    Route::patch('stock-movements/{stockMovement}/cancel', [StockMovementController::class, 'cancel'])->name('stock-movements.cancel');
 });
