@@ -1,0 +1,71 @@
+# Archivos y directorios a ignorar durante el build de Docker
+
+# Directorios de dependencias
+node_modules/
+vendor/
+
+# Archivos de configuración local
+.env
+.env.local
+.env.*.local
+
+# Logs
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Cache de Laravel
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Cache de Bootstrap
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
+docker/
+
+# Testing
+.phpunit.result.cache
+coverage/
+
+# Build artifacts
+dist/
+build/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Backups
+*.backup
+*.bak
+*.sql
+
+# Archivos de desarrollo
+dev-with-ngrok.sh
+serve-with-ngrok.sh
+ngrok.log

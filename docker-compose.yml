@@ -1,0 +1,187 @@
+version: '3.8'
+
+services:
+  # Aplicación Laravel
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        user: laravel
+        uid: 1000
+    image: master-color-api
+    container_name: master-color-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - master-color
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - APP_URL=${APP_URL:-http://localhost:8000}
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-master_color_api}
+      - DB_USERNAME=${DB_USERNAME:-laravel}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=null
+      - REDIS_PORT=6379
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+
+  # Servidor Web (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: master-color-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+      - "8443:443"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - master-color
+    depends_on:
+      - app
+
+  # Base de datos MySQL
+  db:
+    image: mysql:8.0
+    container_name: master-color-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-master_color_api}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - master-color
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:alpine
+    container_name: master-color-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - master-color
+
+  # Worker para colas
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        user: laravel
+        uid: 1000
+    image: master-color-api
+    container_name: master-color-queue
+    restart: unless-stopped
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - master-color
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-master_color_api}
+      - DB_USERNAME=${DB_USERNAME:-laravel}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - REDIS_HOST=redis
+      - QUEUE_CONNECTION=redis
+
+  # Scheduler para tareas programadas
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        user: laravel
+        uid: 1000
+    image: master-color-api
+    container_name: master-color-scheduler
+    restart: unless-stopped
+    command: /bin/bash -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - master-color
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_ENV=${APP_ENV:-local}
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+
+  # PhpMyAdmin para administrar la base de datos
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: master-color-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${DB_USERNAME:-laravel}
+      PMA_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+    networks:
+      - master-color
+    depends_on:
+      - db
+
+  # Mailhog para capturar emails en desarrollo
+  mailhog:
+    image: mailhog/mailhog
+    container_name: master-color-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - master-color
+
+# Volúmenes persistentes
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Red para los contenedores
+networks:
+  master-color:
+    driver: bridge

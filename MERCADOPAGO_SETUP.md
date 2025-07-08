@@ -20,7 +20,7 @@ MERCADOPAGO_PUBLIC_KEY=TEST-abcdef12-3456-7890-abcd-ef1234567890
 MERCADOPAGO_SANDBOX=true
 
 # Frontend URL for payment redirects
-APP_FRONTEND_URL=http://localhost:3000
+APP_FRONTEND_URL=http://localhost:5173
 ```
 
 ## Paso 3: Usuarios de Prueba
@@ -39,9 +39,9 @@ MercadoPago proporciona usuarios de prueba para simular pagos:
 ## Paso 4: URLs de Retorno
 
 El sistema está configurado para redirigir a:
-- **Éxito**: `http://localhost:3000/payment/success`
-- **Fallo**: `http://localhost:3000/payment/failure`
-- **Pendiente**: `http://localhost:3000/payment/pending`
+- **Éxito**: `http://localhost:5173/payment/success`
+- **Fallo**: `http://localhost:5173/payment/failure`
+- **Pendiente**: `http://localhost:5173/payment/pending`
 
 ## Paso 5: Webhook URL
 

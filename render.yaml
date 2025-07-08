@@ -1,0 +1,45 @@
+# Configuración para Render.com
+services:
+  - type: web
+    name: master-color-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.cloud
+    plan: starter
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    buildCommand: ""
+    startCommand: ""
+    autoDeploy: true
+    
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_NAME
+        value: "Master Color API"
+      - key: APP_TIMEZONE
+        value: "America/Lima"
+      - key: LOG_LEVEL
+        value: info
+      - key: CACHE_DRIVER
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+
+  # Base de datos PostgreSQL (recomendada para Render)
+  - type: pgsql
+    name: master-color-db
+    databaseName: master_color_api
+    user: master_color_user
+    plan: starter
+    region: oregon
+    
+  # Redis para cache y sesiones
+  - type: redis
+    name: master-color-redis
+    plan: starter
+    region: oregon

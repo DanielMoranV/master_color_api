@@ -158,3 +158,13 @@ Route::post('webhooks/mercadopago', [WebhookController::class, 'mercadoPago'])->
 Route::get('payment-status/{orderId}', [WebhookController::class, 'getPaymentStatus'])
     ->middleware([\App\Http\Middleware\ClientAuth::class])
     ->name('payment.status');
+
+// Ruta de prueba para MercadoPago (solo desarrollo)
+if (app()->environment('local')) {
+    Route::get('test/mercadopago', function () {
+        $paymentService = app(\App\Services\PaymentService::class);
+        $result = $paymentService->testMercadoPagoConnection();
+        
+        return response()->json($result);
+    })->name('test.mercadopago');
+}

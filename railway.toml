@@ -1,0 +1,28 @@
+# Configuración para Railway.app
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.cloud"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Variables de entorno específicas para Railway
+[environments.production]
+variables = [
+    "APP_ENV=production",
+    "APP_DEBUG=false",
+    "LOG_LEVEL=info",
+    "CACHE_DRIVER=redis",
+    "SESSION_DRIVER=redis",
+    "QUEUE_CONNECTION=redis"
+]
+
+[environments.staging]
+variables = [
+    "APP_ENV=staging", 
+    "APP_DEBUG=true",
+    "LOG_LEVEL=debug"
+]

@@ -6,7 +6,8 @@ use App\Classes\ApiResponseClass;
 use Illuminate\Http\Request;
 use App\Models\Address;
 use App\Http\Resources\AddressResource;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreAddressRequest;
+use App\Http\Requests\UpdateAddressRequest;
 use Illuminate\Support\Facades\Auth;
 
 class ClientAddressController extends Controller
@@ -38,7 +39,7 @@ class ClientAddressController extends Controller
     /**
      * Store a newly created address.
      */
-    public function store(Request $request)
+    public function store(StoreAddressRequest $request)
     {
         try {
             $client = Auth::guard('client')->user();
@@ -47,19 +48,6 @@ class ClientAddressController extends Controller
                 return ApiResponseClass::errorResponse('No autenticado', 401);
             }
 
-            $validator = Validator::make($request->all(), [
-                'address_full' => 'required|string|max:255',
-                'district' => 'required|string|max:100',
-                'province' => 'required|string|max:100',
-                'department' => 'required|string|max:100',
-                'postal_code' => 'required|string|max:20',
-                'reference' => 'nullable|string|max:255',
-                'is_main' => 'boolean',
-            ]);
-
-            if ($validator->fails()) {
-                return ApiResponseClass::errorResponse('Error de validación', 422, $validator->errors());
-            }
 
             // If this is the main address, unset any existing main address
             if ($request->is_main) {
@@ -121,7 +109,7 @@ class ClientAddressController extends Controller
     /**
      * Update the specified address.
      */
-    public function update(Request $request, $id)
+    public function update(UpdateAddressRequest $request, $id)
     {
         try {
             $client = Auth::guard('client')->user();
@@ -136,19 +124,6 @@ class ClientAddressController extends Controller
                 return ApiResponseClass::errorResponse('Dirección no encontrada', 404);
             }
 
-            $validator = Validator::make($request->all(), [
-                'address_full' => 'sometimes|string|max:255',
-                'district' => 'sometimes|string|max:100',
-                'province' => 'sometimes|string|max:100',
-                'department' => 'sometimes|string|max:100',
-                'postal_code' => 'sometimes|string|max:20',
-                'reference' => 'nullable|string|max:255',
-                'is_main' => 'boolean',
-            ]);
-
-            if ($validator->fails()) {
-                return ApiResponseClass::errorResponse('Error de validación', 422, $validator->errors());
-            }
 
             // If this is being set as the main address, unset any existing main address
             if ($request->has('is_main') && $request->is_main) {
