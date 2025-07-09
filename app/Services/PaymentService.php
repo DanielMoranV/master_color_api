@@ -210,10 +210,23 @@ class PaymentService
 
     /**
      * Verificar estado de pago directamente con MercadoPago
+     * 
+     * @param string|null $preferenceId ID de la preferencia o external_id del pago
+     * @param Order $order Orden asociada al pago
+     * @return bool true si se actualizó el estado, false si no
      */
-    public function checkPaymentStatus(string $preferenceId, Order $order): bool
+    public function checkPaymentStatus(?string $preferenceId, Order $order): bool
     {
         try {
+            // Validar que tengamos un preferenceId válido
+            if (empty($preferenceId)) {
+                Log::warning('checkPaymentStatus called with empty preferenceId', [
+                    'order_id' => $order->id,
+                    'preference_id' => $preferenceId
+                ]);
+                return false;
+            }
+            
             // Verificar si la orden ya fue cancelada o expiró
             if ($this->isOrderExpiredOrCancelled($order)) {
                 Log::info('Order expired or cancelled, skipping payment check', [
@@ -535,9 +548,9 @@ class PaymentService
             'external_reference' => (string) $order->id,
             'expires' => false,
             'back_urls' => [
-                'success' => $frontendUrl . '/payment/success?order=' . $order->id,
-                'failure' => $frontendUrl . '/payment/failure?order=' . $order->id,
-                'pending' => $frontendUrl . '/payment/pending?order=' . $order->id
+                'success' => config('mercadopago.success_url'),
+                'failure' => config('mercadopago.failure_url'),
+                'pending' => config('mercadopago.pending_url')
             ]
         ];
 

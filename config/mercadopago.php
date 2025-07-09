@@ -16,10 +16,10 @@ return [
     // Configuración del entorno
     'sandbox' => env('MERCADOPAGO_SANDBOX', true),
 
-    // URLs de retorno - todas apuntan a la misma página que maneja todos los estados
-    'success_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return',
-    'failure_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return',
-    'pending_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return',
+    // URLs de retorno - sin parámetros (MercadoPago agregará los suyos)
+    'success_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return/success',
+    'failure_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return/failure',
+    'pending_url' => env('APP_FRONTEND_URL', 'http://localhost:5173') . '/payment-return/pending',
 
     // Configuración de la aplicación (máximo 13 caracteres, solo letras y números)
     'statement_descriptor' => 'MasterColor',

@@ -4,16 +4,15 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Facades\MercadoPago;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
 class PaymentPollingService
 {
-    private PaymentService $paymentService;
-    
-    public function __construct(PaymentService $paymentService)
+    public function __construct()
     {
-        $this->paymentService = $paymentService;
+        // Ya no necesitamos PaymentService, usamos MercadoPagoWrapper
     }
 
     /**
@@ -56,7 +55,96 @@ class PaymentPollingService
 
         // Intentar verificar con MercadoPago
         try {
-            $updated = $this->paymentService->checkPaymentStatus($payment->external_id, $order);
+            // Validar que tengamos external_id o payment_code antes de hacer la verificación
+            $paymentId = $payment->external_id ?? $payment->payment_code;
+            
+            // Limpiar el payment ID para manejar formatos no estándar
+            if (!empty($paymentId)) {
+                $originalPaymentId = $paymentId;
+                $paymentId = $this->cleanPaymentId($paymentId);
+                
+                // Verificar si el ID limpiado parece ser un preference_id (números largos que empiezan con 204)
+                if ($this->looksLikePreferenceId($paymentId)) {
+                    Log::warning('Payment ID parece ser preference_id, no payment_id real', [
+                        'order_id' => $order->id,
+                        'payment_id' => $paymentId,
+                        'original_id' => $originalPaymentId,
+                        'message' => 'Se necesita el payment_id real desde la URL de retorno'
+                    ]);
+                    
+                    return [
+                        'success' => false,
+                        'payment_status' => $payment->status,
+                        'order_status' => $order->status,
+                        'should_continue_polling' => false,
+                        'message' => 'Se necesita payment_id real desde URL de retorno'
+                    ];
+                }
+            }
+            
+            if (empty($paymentId)) {
+                Log::warning('Payment external_id and payment_code are null or empty, skipping MercadoPago check', [
+                    'order_id' => $order->id,
+                    'payment_id' => $payment->id
+                ]);
+                
+                $this->incrementBackoff($order->id);
+                
+                return [
+                    'success' => true,
+                    'payment_status' => $payment->status,
+                    'order_status' => $order->status,
+                    'should_continue_polling' => true,
+                    'next_check_in' => $this->getNextCheckTime($order->id),
+                    'message' => 'No hay ID de pago para verificar con MercadoPago'
+                ];
+            }
+            
+            // Usar MercadoPagoWrapper para obtener información del pago
+            $paymentData = MercadoPago::getPayment($paymentId);
+            
+            if (!$paymentData) {
+                Log::warning('Could not fetch payment data from MercadoPago', [
+                    'order_id' => $order->id,
+                    'payment_id' => $paymentId
+                ]);
+                
+                $this->incrementBackoff($order->id);
+                
+                return [
+                    'success' => false,
+                    'payment_status' => $payment->status,
+                    'order_status' => $order->status,
+                    'should_continue_polling' => true,
+                    'next_check_in' => $this->getNextCheckTime($order->id),
+                    'message' => 'No se pudo obtener información del pago de MercadoPago'
+                ];
+            }
+            
+            // Verificar si el estado cambió
+            $newStatus = $this->mapMercadoPagoStatus($paymentData['status']);
+            $updated = false;
+            
+            if ($payment->status !== $newStatus) {
+                $payment->update([
+                    'status' => $newStatus,
+                    'external_id' => $paymentData['id'],
+                    'external_response' => json_encode($paymentData),
+                ]);
+                
+                // Actualizar estado de la orden
+                $this->updateOrderStatus($order, $paymentData['status']);
+                
+                $updated = true;
+                
+                Log::info('Payment status updated via polling', [
+                    'order_id' => $order->id,
+                    'payment_id' => $paymentId,
+                    'old_status' => $payment->status,
+                    'new_status' => $newStatus,
+                    'mp_status' => $paymentData['status']
+                ]);
+            }
             
             if ($updated) {
                 $order->refresh();
@@ -201,5 +289,80 @@ class PaymentPollingService
                 'Demasiados intentos, considere contactar soporte' : 
                 'Verificando estado de pago'
         ];
+    }
+    
+    /**
+     * Mapear estados de MercadoPago a nuestros estados (igual que MercadoPagoWrapper)
+     */
+    private function mapMercadoPagoStatus(string $status): string
+    {
+        return match ($status) {
+            'approved' => 'approved',
+            'rejected' => 'rejected',
+            'cancelled' => 'cancelled',
+            'refunded' => 'refunded',
+            'charged_back' => 'refunded',
+            default => 'pending',
+        };
+    }
+    
+    /**
+     * Actualizar estado de la orden basado en el estado del pago
+     */
+    private function updateOrderStatus(Order $order, string $mercadoPagoStatus): void
+    {
+        switch ($mercadoPagoStatus) {
+            case 'approved':
+                $order->update(['status' => 'pendiente']);
+                // Descontar stock automáticamente
+                app(\App\Services\StockMovementService::class)->processOrderStockReduction($order);
+                break;
+
+            case 'rejected':
+            case 'cancelled':
+                $order->update(['status' => 'pago_fallido']);
+                break;
+
+            case 'pending':
+            case 'in_process':
+                // Mantener en pendiente_pago
+                break;
+        }
+    }
+    
+    /**
+     * Limpiar payment ID para manejar formatos no estándar
+     */
+    private function cleanPaymentId(string $paymentId): string
+    {
+        // Si el ID contiene guiones, extraer solo la parte numérica inicial
+        if (strpos($paymentId, '-') !== false) {
+            $parts = explode('-', $paymentId);
+            $numericPart = $parts[0];
+            
+            // Verificar que la primera parte sea numérica
+            if (is_numeric($numericPart)) {
+                Log::info('Cleaned payment ID in polling service', [
+                    'original' => $paymentId,
+                    'cleaned' => $numericPart
+                ]);
+                return $numericPart;
+            }
+        }
+        
+        // Si no hay guiones o no es el formato esperado, devolver el ID original
+        return $paymentId;
+    }
+    
+    /**
+     * Verificar si un ID parece ser un preference_id en lugar de payment_id
+     */
+    private function looksLikePreferenceId(string $paymentId): bool
+    {
+        // Los preference_id suelen ser números largos que empiezan con 204
+        // Los payment_id reales suelen ser números más cortos (7-10 dígitos)
+        return is_numeric($paymentId) && 
+               strlen($paymentId) >= 9 && 
+               str_starts_with($paymentId, '204');
     }
 }

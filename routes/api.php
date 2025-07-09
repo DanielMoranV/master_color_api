@@ -11,6 +11,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -167,4 +168,18 @@ if (app()->environment('local')) {
         
         return response()->json($result);
     })->name('test.mercadopago');
+    
+    // Test webhook endpoint (temporal para debugging)
+    Route::post('/test/webhook', function(Request $request) {
+        \Log::info('🧪 TEST WEBHOOK RECIBIDO', [
+            'headers' => $request->headers->all(),
+            'body' => $request->all(),
+            'raw_body' => $request->getContent(),
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+        
+        return response()->json(['status' => 'received', 'message' => 'Test webhook logged']);
+    })->name('test.webhook');
 }

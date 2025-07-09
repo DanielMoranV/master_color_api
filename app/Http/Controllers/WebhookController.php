@@ -16,13 +16,24 @@ class WebhookController extends Controller
     public function mercadoPago(Request $request)
     {
         try {
-            // Log webhook received
-            Log::info('MercadoPago webhook recibido', [
-                'headers' => $request->headers->all(),
-                'body' => $request->all(),
+            // Log webhook received with comprehensive details
+            Log::info('🔔 MercadoPago webhook recibido - ANÁLISIS COMPLETO', [
+                'timestamp' => now()->toISOString(),
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
+                'headers' => $request->headers->all(),
+                'query_params' => $request->query(),
+                'body_raw' => $request->getContent(),
+                'body_parsed' => $request->all(),
+                'content_type' => $request->header('Content-Type'),
+                'content_length' => $request->header('Content-Length'),
             ]);
+
+            // Análisis detallado del payload
+            $webhookData = $request->all();
+            $this->analyzeWebhookPayload($webhookData);
 
             // Validaciones de seguridad
             if (!$this->validateWebhookSecurity($request)) {
@@ -34,20 +45,42 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
             }
 
-            // Detectar formato del webhook y validar
+            // Detectar formato del webhook según documentación oficial
             $webhookData = $request->all();
             $webhookId = null;
 
-            // Formato nuevo: {"action": "payment.created", "data": {"id": "xxx"}, "type": "payment"}
-            if (isset($webhookData['action']) && isset($webhookData['type']) && isset($webhookData['data']['id'])) {
-                $webhookId = $webhookData['data']['id'] . '_' . $webhookData['type'] . '_' . $webhookData['action'];
+            // Formato oficial MercadoPago (2024): {"type": "payment", "action": "payment.updated", "data": {"id": "123456"}}
+            if (isset($webhookData['type']) && isset($webhookData['data']['id'])) {
+                $webhookId = $webhookData['data']['id'] . '_' . $webhookData['type'] . '_' . ($webhookData['action'] ?? 'unknown');
+                
+                // Validar que sea una notificación de pago
+                if ($webhookData['type'] !== 'payment') {
+                    Log::info('Webhook no es de tipo payment, ignorando', [
+                        'type' => $webhookData['type'],
+                        'action' => $webhookData['action'] ?? 'unknown',
+                        'webhook_id' => $webhookId
+                    ]);
+                    return response()->json(['status' => 'success', 'message' => 'Non-payment webhook ignored'], 200);
+                }
             }
-            // Formato antiguo: {"id": "xxx", "topic": "payment"}
+            // Formato alternativo para compatibilidad: {"id": "xxx", "topic": "payment"}
             elseif (isset($webhookData['id']) && isset($webhookData['topic'])) {
                 $webhookId = $webhookData['id'] . '_' . $webhookData['topic'];
+                
+                // Validar que sea una notificación de pago
+                if ($webhookData['topic'] !== 'payment') {
+                    Log::info('Webhook topic no es payment, ignorando', [
+                        'topic' => $webhookData['topic'],
+                        'webhook_id' => $webhookId
+                    ]);
+                    return response()->json(['status' => 'success', 'message' => 'Non-payment webhook ignored'], 200);
+                }
             } else {
-                Log::warning('Invalid webhook payload - unknown format', $webhookData);
-                return response()->json(['status' => 'error', 'message' => 'Invalid payload format'], 400);
+                Log::warning('⚠️ FORMATO DE WEBHOOK NO RECONOCIDO', [
+                    'available_fields' => array_keys($webhookData),
+                    'webhook_data' => $webhookData
+                ]);
+                return response()->json(['status' => 'error', 'message' => 'Invalid webhook format'], 400);
             }
 
             // Verificar duplicados (idempotencia)
@@ -194,6 +227,97 @@ class WebhookController extends Controller
     {
         // Guardar por 24 horas para evitar duplicados
         \Illuminate\Support\Facades\Cache::put('processed_webhook_' . $webhookId, true, now()->addHours(24));
+    }
+
+    /**
+     * Analizar payload del webhook para entender la estructura
+     */
+    private function analyzeWebhookPayload(array $data): void
+    {
+        $analysis = [
+            'payload_structure' => [],
+            'detected_format' => 'unknown',
+            'payment_id_candidates' => [],
+            'topic_candidates' => [],
+            'action_candidates' => [],
+        ];
+
+        // Analizar estructura de primer nivel
+        foreach ($data as $key => $value) {
+            $analysis['payload_structure'][$key] = [
+                'type' => gettype($value),
+                'value' => is_array($value) ? '[array]' : (is_string($value) ? $value : json_encode($value)),
+                'is_array' => is_array($value),
+                'array_keys' => is_array($value) ? array_keys($value) : null,
+            ];
+        }
+
+        // Detectar formato del webhook según documentación oficial
+        if (isset($data['type']) && isset($data['data']['id'])) {
+            $analysis['detected_format'] = 'official_format_2024';
+            $analysis['action_candidates'][] = $data['action'] ?? 'no_action';
+            $analysis['topic_candidates'][] = $data['type'];
+            
+            $analysis['payment_id_candidates'][] = [
+                'source' => 'data.id',
+                'value' => $data['data']['id'],
+                'type' => gettype($data['data']['id']),
+                'is_official' => true
+            ];
+            
+            // Verificar campos adicionales del formato oficial
+            $officialFields = ['api_version', 'live_mode', 'date_created', 'user_id', 'id'];
+            foreach ($officialFields as $field) {
+                if (isset($data[$field])) {
+                    $analysis['official_fields'][$field] = $data[$field];
+                }
+            }
+        }
+
+        if (isset($data['id']) && isset($data['topic'])) {
+            $analysis['detected_format'] = 'legacy_format';
+            $analysis['topic_candidates'][] = $data['topic'];
+            $analysis['payment_id_candidates'][] = [
+                'source' => 'id',
+                'value' => $data['id'],
+                'type' => gettype($data['id']),
+                'is_official' => false
+            ];
+        }
+
+        // Buscar otros campos que puedan contener IDs
+        $possibleIdFields = ['payment_id', 'collection_id', 'external_reference', 'preference_id'];
+        foreach ($possibleIdFields as $field) {
+            if (isset($data[$field])) {
+                $analysis['payment_id_candidates'][] = [
+                    'source' => $field,
+                    'value' => $data[$field],
+                    'type' => gettype($data[$field])
+                ];
+            }
+        }
+
+        // Log análisis detallado
+        Log::info('🔍 ANÁLISIS DETALLADO DEL WEBHOOK', $analysis);
+
+        // Sugerencias basadas en el análisis
+        $suggestions = [];
+        if ($analysis['detected_format'] === 'unknown') {
+            $suggestions[] = 'Formato de webhook no reconocido - revisar documentación de MercadoPago';
+        }
+        if (empty($analysis['payment_id_candidates'])) {
+            $suggestions[] = 'No se encontraron candidatos para payment_id';
+        }
+        if (count($analysis['payment_id_candidates']) > 1) {
+            $suggestions[] = 'Múltiples candidatos para payment_id - determinar cuál usar';
+        }
+
+        if (!empty($suggestions)) {
+            Log::warning('⚠️ SUGERENCIAS PARA WEBHOOK', [
+                'suggestions' => $suggestions,
+                'payload' => $data
+            ]);
+        }
     }
 
     /**
