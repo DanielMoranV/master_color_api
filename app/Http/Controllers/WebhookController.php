@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Classes\ApiResponseClass;
 use App\Services\PaymentService;
+use App\Facades\MercadoPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -55,9 +56,8 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'success', 'message' => 'Already processed'], 200);
             }
 
-            // Procesar la notificación
-            $paymentService = app(PaymentService::class);
-            $result = $paymentService->processWebhookNotification($request->all());
+            // Procesar la notificación usando el wrapper
+            $result = MercadoPago::processWebhookNotification($request->all());
 
             if ($result) {
                 // Marcar webhook como procesado

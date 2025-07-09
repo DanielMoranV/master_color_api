@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\Client;
 use App\Services\PaymentService;
+use App\Facades\MercadoPago;
 use Illuminate\Support\Facades\Auth;
 
 class ClientOrderController extends Controller
@@ -362,15 +363,21 @@ class ClientOrderController extends Controller
                 }
             }
 
-            $paymentService = app(PaymentService::class);
-            $result = $paymentService->createPaymentPreference($order);
-
-            if (!$result['success']) {
-                return ApiResponseClass::errorResponse('Error al crear preferencia de pago: ' . $result['error'], 500);
-            }
+            // Crear preferencia de pago usando el wrapper
+            $result = MercadoPago::setOrder($order)->begin(function($mp) use ($order) {
+                foreach ($order->orderDetails as $detail) {
+                    $mp->addItem([
+                        'id' => (string) $detail->product->id,
+                        'title' => $detail->product->name,
+                        'quantity' => $detail->quantity,
+                        'price' => $detail->unit_price,
+                        'currency' => 'PEN',
+                    ]);
+                }
+            });
 
             return ApiResponseClass::sendResponse([
-                'preference_id' => $result['preference_id'],
+                'preference_id' => $result['id'],
                 'init_point' => $result['init_point'],
                 'sandbox_init_point' => $result['sandbox_init_point'],
                 'order_id' => $order->id,
