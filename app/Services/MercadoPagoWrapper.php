@@ -85,7 +85,6 @@ class MercadoPagoWrapper
             return [
                 'id' => $preference->id,
                 'init_point' => $preference->init_point,
-                'sandbox_init_point' => $preference->sandbox_init_point,
                 'items' => $this->items,
                 'order_id' => $this->order?->id,
             ];
@@ -255,6 +254,7 @@ class MercadoPagoWrapper
             // Actualizar el pago
             $payment->update([
                 'status' => $this->mapMercadoPagoStatus($paymentData['status']),
+                'external_id' => $paymentData['id'],
                 'external_response' => json_encode($paymentData),
             ]);
 

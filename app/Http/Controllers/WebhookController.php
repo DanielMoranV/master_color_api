@@ -7,6 +7,7 @@ use App\Services\PaymentService;
 use App\Facades\MercadoPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\ProcessMercadoPagoWebhook;
 
 class WebhookController extends Controller
 {
@@ -16,6 +17,11 @@ class WebhookController extends Controller
     public function mercadoPago(Request $request)
     {
         try {
+            Log::info([
+                'driver' => 'single',
+                'path' => storage_path('logs/mercadoPagoWebhook.log'),
+                'request' => $request->all(),
+            ]);
             // Log webhook received with comprehensive details
             Log::info('🔔 MercadoPago webhook recibido - ANÁLISIS COMPLETO', [
                 'timestamp' => now()->toISOString(),
@@ -33,6 +39,14 @@ class WebhookController extends Controller
 
             // Análisis detallado del payload
             $webhookData = $request->all();
+
+            // Si es un webhook de prueba de Mercado Pago (id 123456), responder OK sin procesar
+            $testId = '123456';
+            $incomingId = $webhookData['id'] ?? ($webhookData['data']['id'] ?? null);
+            if ($incomingId === $testId) {
+                Log::info('🧪 Webhook de prueba recibido (id 123456) - se responde 200 OK');
+                return response()->json(['status' => 'success', 'message' => 'Test webhook acknowledged'], 200);
+            }
             $this->analyzeWebhookPayload($webhookData);
 
             // Validaciones de seguridad
@@ -89,6 +103,19 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'success', 'message' => 'Already processed'], 200);
             }
 
+            // --- Nueva estrategia: encolar el procesamiento y responder 200 rápidamente
+            // Encolar Job para procesamiento asíncrono
+            \App\Jobs\ProcessMercadoPagoWebhook::dispatchAfterResponse($request->all());
+            
+            // Marcar como procesado para evitar duplicados
+            $this->markWebhookAsProcessed($webhookId);
+
+            Log::info('Webhook encolado para procesamiento asíncrono', [
+                'webhook_id' => $webhookId,
+            ]);
+
+            return response()->json(['status' => 'queued'], 200);
+
             // Procesar la notificación usando el wrapper
             $result = MercadoPago::processWebhookNotification($request->all());
 
@@ -141,6 +168,17 @@ class WebhookController extends Controller
      */
     private function validateWebhookSecurity(Request $request): bool
     {
+        // En entorno local, permitir todos los requests para facilitar pruebas
+        if (app()->environment('local')) {
+            return true;
+        }
+
+        // 0. Verificar firma x-signature
+        if (!$this->verifySignature($request)) {
+            Log::warning('x-signature verification failed');
+            return false; // detiene el flujo de security validation
+        }
+
         // 1. Verificar User-Agent de MercadoPago
         $userAgent = $request->userAgent();
         if (!str_contains($userAgent, 'MercadoPago') && !str_contains($userAgent, 'Mercado')) {
@@ -227,6 +265,39 @@ class WebhookController extends Controller
     {
         // Guardar por 24 horas para evitar duplicados
         \Illuminate\Support\Facades\Cache::put('processed_webhook_' . $webhookId, true, now()->addHours(24));
+    }
+
+    /**
+     * Validar firma HMAC enviada en header x-signature
+     * Documentación oficial:
+     *   ts=TIMESTAMP,v1=HASH_SHA256_HEX
+     * Template: id:[data.id_url];request-id:[x-request-id_header];ts:[ts_header];
+     */
+    private function verifySignature(Request $request): bool
+    {
+        $secret = config('mercadopago.webhook_secret');
+        if (!$secret) {
+            // Si no se configuró, omitir validación (desarrollo)
+            return app()->environment('local');
+        }
+
+        $header = $request->header('x-signature');
+        if (!$header || !str_contains($header, ',')) {
+            return false;
+        }
+
+        [$tsPart, $v1Part] = explode(',', $header, 2);
+        $ts = (string)substr($tsPart, 3); // quitar 'ts='
+        $v1 = (string)substr($v1Part, 3); // quitar 'v1='
+
+        $requestId = $request->header('x-request-id');
+        $dataId = strtolower($request->input('data.id') ?? $request->query('data.id') ?? $request->input('id'));
+
+        $template = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
+
+        $expected = hash_hmac('sha256', $template, $secret);
+
+        return hash_equals($expected, $v1);
     }
 
     /**
@@ -324,6 +395,79 @@ class WebhookController extends Controller
      * Get payment status for a specific order (for frontend polling)
      * Also checks MercadoPago API directly if payment is still pending
      */
+    /**
+     * Fallback endpoint para procesar payment_id enviado desde el frontend
+     * cuando el webhook de MercadoPago no llega (por firewalls o entornos locales).
+     * Espera order_id y payment_id en el body (JSON o x-www-form-urlencoded).
+     * No requiere autenticación para simplificar el flujo después del redirect.
+     */
+    public function paymentReturn(Request $request)
+    {
+        // Log detallado de la petición completa
+        Log::info('🔄 PAYMENT RETURN - Petición recibida desde frontend', [
+            'timestamp' => now()->toISOString(),
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'headers' => $request->headers->all(),
+            'query_params' => $request->query(),
+            'body_raw' => $request->getContent(),
+            'body_parsed' => $request->all(),
+            'content_type' => $request->header('Content-Type'),
+            'user_agent' => $request->header('User-Agent'),
+            'ip' => $request->ip(),
+        ]);
+
+        $validated = $request->validate([
+            'order_id' => 'required|integer|exists:orders,id',
+            'payment_id' => 'required|string',
+        ]);
+
+        Log::info('🔄 PAYMENT RETURN - Datos validados', [
+            'order_id' => $validated['order_id'],
+            'payment_id' => $validated['payment_id'],
+            'payment_id_length' => strlen($validated['payment_id']),
+            'payment_id_is_numeric' => is_numeric($validated['payment_id']),
+            'payment_id_contains_dashes' => str_contains($validated['payment_id'], '-'),
+        ]);
+
+        try {
+            // Disparar procesamiento manual reutilizando lógica del service
+            $paymentService = app(PaymentService::class);
+            
+            Log::info('🔄 PAYMENT RETURN - Iniciando procesamiento con PaymentService', [
+                'service_class' => get_class($paymentService),
+                'simulated_webhook_payload' => [
+                    'id' => $validated['payment_id'],
+                    'topic' => 'payment',
+                ]
+            ]);
+            
+            // Simular payload de webhook de formato antiguo
+            $processed = $paymentService->processWebhookNotification([
+                'id' => $validated['payment_id'],
+                'topic' => 'payment',
+            ]);
+
+            Log::info('🔄 PAYMENT RETURN - Resultado del procesamiento', [
+                'processed' => $processed,
+                'order_id' => $validated['order_id'],
+                'payment_id' => $validated['payment_id'],
+            ]);
+
+            return ApiResponseClass::sendResponse([
+                'processed' => $processed,
+            ], $processed ? 'Pago procesado correctamente' : 'No se pudo procesar el pago', 200);
+        } catch (\Exception $e) {
+            Log::error('🔄 PAYMENT RETURN - Error en procesamiento', [
+                'order_id' => $validated['order_id'],
+                'payment_id' => $validated['payment_id'],
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return ApiResponseClass::errorResponse('Error interno del servidor', 500, [$e->getMessage()]);
+        }
+    }
+
     public function getPaymentStatus($orderId)
     {
         try {

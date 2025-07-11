@@ -171,9 +171,11 @@ class PaymentService
     {
         switch ($mercadoPagoStatus) {
             case 'approved':
-                $order->update(['status' => 'pendiente']);
-                // Descontar stock automáticamente
-                app(StockMovementService::class)->processOrderStockReduction($order);
+                // Solo descontar stock la primera vez que se marca como aprobada
+                if ($order->status !== 'pendiente') {
+                    $order->update(['status' => 'pendiente']);
+                    app(StockMovementService::class)->processOrderStockReduction($order);
+                }
                 break;
 
             case 'rejected':
@@ -554,12 +556,9 @@ class PaymentService
             ]
         ];
 
-        // Solo agregar notification_url y statement_descriptor si no es localhost
-        if (!str_contains($backendUrl, 'localhost') && !str_contains($backendUrl, '127.0.0.1')) {
-            $preference_data['notification_url'] = $backendUrl . '/api/webhooks/mercadopago';
-            $preference_data['statement_descriptor'] = 'MasterColor';
-            // No agregar auto_return ya que causa conflictos con back_urls personalizadas
-        }
+        // Agregar siempre notification_url para recibir webhooks incluso en desarrollo
+        $preference_data['notification_url'] = $backendUrl . '/api/webhooks/mercadopago';
+        $preference_data['statement_descriptor'] = 'MasterColor';
 
         Log::info('Creating MercadoPago preference with CURL', [
             'order_id' => $order->id,
@@ -628,7 +627,6 @@ class PaymentService
             'success' => true,
             'preference_id' => $preference['id'],
             'init_point' => $preference['init_point'],
-            'sandbox_init_point' => $preference['sandbox_init_point'] ?? null,
             'payment_id' => $payment->id
         ];
     }

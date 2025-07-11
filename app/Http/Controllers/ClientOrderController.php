@@ -379,7 +379,6 @@ class ClientOrderController extends Controller
             return ApiResponseClass::sendResponse([
                 'preference_id' => $result['id'],
                 'init_point' => $result['init_point'],
-                'sandbox_init_point' => $result['sandbox_init_point'],
                 'order_id' => $order->id,
                 'total_amount' => $order->total
             ], 'Preferencia de pago creada exitosamente', 200);

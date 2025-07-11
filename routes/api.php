@@ -154,6 +154,8 @@ Route::middleware(['jwt.auth', 'check.token.version', 'admin.only'])->group(func
 
 // MercadoPago webhook (sin autenticación para permitir notificaciones)
 Route::post('webhooks/mercadopago', [WebhookController::class, 'mercadoPago'])->name('webhooks.mercadopago');
+// Endpoint fallback que recibe payment_id desde el frontend tras el retorno de pago
+Route::post('payment-return', [WebhookController::class, 'paymentReturn'])->name('payment.return');
 
 // Payment status check (con autenticación para clientes)
 Route::get('payment-status/{orderId}', [WebhookController::class, 'getPaymentStatus'])
